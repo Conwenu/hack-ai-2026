@@ -1,7 +1,3 @@
-// ============================================================
-// Ripple – TimelineNode (R3F mesh)
-// ============================================================
-
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
@@ -24,11 +20,9 @@ export default function TimelineNode({
   const meshRef = useRef<Mesh>(null);
   const [hovered, setHovered] = useState(false);
 
-  // Gentle idle animation
   useFrame((_, delta) => {
     if (!meshRef.current) return;
     meshRef.current.rotation.y += delta * 0.3;
-    // Pulse scale when active
     const target = isActive ? 1.3 : hovered ? 1.1 : 1;
     meshRef.current.scale.lerp(
       { x: target, y: target, z: target } as any,
@@ -38,15 +32,21 @@ export default function TimelineNode({
 
   return (
     <group position={position}>
-      {/* The 3D node */}
       <mesh
         ref={meshRef}
         onClick={(e) => {
           e.stopPropagation();
           onClick();
         }}
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerOut={() => {
+          setHovered(false);
+          document.body.style.cursor = "default";
+        }}
       >
         <octahedronGeometry args={[0.35, 0]} />
         <meshStandardMaterial
@@ -59,29 +59,70 @@ export default function TimelineNode({
         />
       </mesh>
 
-      {/* Connecting line to next node (drawn from parent scene) */}
-
-      {/* HTML overlay label */}
-      {(isActive || hovered) && (
+      {/* Hover label only — no click detail here */}
+      {hovered && !isActive && (
         <Html
-          position={[1.2, 0, 0]}
+          position={[0.6, 0.4, 0]}
           center={false}
-          style={{ pointerEvents: "none", whiteSpace: "nowrap" }}
+          style={{ pointerEvents: "none" }}
         >
           <div
-            className={`
-              px-4 py-2 rounded-lg backdrop-blur-md
-              border border-white/10 bg-black/60
-              transition-opacity duration-300
-              ${isActive ? "opacity-100" : "opacity-70"}
-            `}
+            style={{
+              width: "130px",
+              padding: "6px 10px",
+              borderRadius: "8px",
+              background: "rgba(0,0,0,0.85)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              backdropFilter: "blur(8px)",
+            }}
           >
-            <p className="text-xs font-medium text-white/90">{step.title}</p>
-            {isActive && (
-              <p className="text-[11px] text-white/40 mt-1 max-w-[220px]">
-                {step.description}
-              </p>
-            )}
+            <p
+              style={{
+                fontSize: "11px",
+                fontWeight: 600,
+                color: "rgba(255,255,255,0.9)",
+                margin: 0,
+                lineHeight: "1.4",
+                wordBreak: "break-word",
+                whiteSpace: "normal",
+              }}
+            >
+              {step.title}
+            </p>
+          </div>
+        </Html>
+      )}
+
+      {/* Active indicator label */}
+      {isActive && (
+        <Html
+          position={[0.6, 0.4, 0]}
+          center={false}
+          style={{ pointerEvents: "none" }}
+        >
+          <div
+            style={{
+              width: "130px",
+              padding: "6px 10px",
+              borderRadius: "8px",
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.2)",
+              backdropFilter: "blur(8px)",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "11px",
+                fontWeight: 700,
+                color: "rgba(255,255,255,1)",
+                margin: 0,
+                lineHeight: "1.4",
+                wordBreak: "break-word",
+                whiteSpace: "normal",
+              }}
+            >
+              {step.title}
+            </p>
           </div>
         </Html>
       )}

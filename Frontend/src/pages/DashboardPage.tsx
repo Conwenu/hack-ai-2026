@@ -1,21 +1,20 @@
-// ============================================================
-// Ripple – Dashboard Page
-// ============================================================
-
 import { useAppStore } from "../stores/useAppStore";
 import { generateMockGoal, generateMockRefinement } from "../services/mockData";
 import { v4 } from "../utils/uid";
 import PromptInput from "../components/Dashboard/PromptInput";
 import ChatMessages from "../components/Dashboard/ChatMessages";
+import TimelinePreview from "../components/Timeline/TimelinePreview";
 
 export default function DashboardPage() {
-  const { phase, messages, addMessage, setPhase, setCurrentGoal } =
-    useAppStore();
+  const { phase, messages, addMessage, setPhase, setCurrentGoal } = useAppStore();
 
-  const isRefining = phase === "refining";
+  const isTransitioning = phase === "transitioning";
+  const titleInCenter = phase === "prompt" && messages.length === 0;
+  const titleInTopLeft = isTransitioning || phase === "timeline";
+  const inputAtBottom = isTransitioning || phase === "timeline";
+  const showChat = messages.length > 0 && !isTransitioning && phase !== "timeline";
 
   const handleSubmit = async (text: string) => {
-    // Record the user message
     addMessage({
       id: v4(),
       role: "user",
@@ -24,61 +23,96 @@ export default function DashboardPage() {
     });
 
     if (phase === "prompt") {
-      // First submission — kick off refinement.
       setPhase("refining");
-
-      // -------------------------------------------------------
-      // TODO (backend): Replace mock with `submitGoal(text)`
-      // from services/api.ts once the backend is live.
-      // -------------------------------------------------------
       const mockReply = generateMockRefinement(text);
-      addMessage(mockReply);
-
-      // Simulate the AI deciding the goal is ready after one exchange.
-      // In production, the backend loop continues until it's satisfied.
+      setTimeout(() => addMessage(mockReply), 600);
       setTimeout(() => {
         const goal = generateMockGoal(text);
         setCurrentGoal(goal);
         setPhase("transitioning");
-
-        // After the transition animation plays, switch to timeline.
         setTimeout(() => setPhase("timeline"), 1400);
-      }, 1800);
-    } else if (isRefining) {
-      // Additional refinement messages
-      // TODO (backend): call refineGoal(goalId, text)
+      }, 2200);
+    } else if (phase === "refining") {
       const mockReply = generateMockRefinement(text);
-      addMessage(mockReply);
+      setTimeout(() => addMessage(mockReply), 500);
     }
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen px-4">
-      {/* Title — only shows on first prompt phase */}
-      {phase === "prompt" && messages.length === 0 && (
-        <div className="mb-10 text-center animate-fade-in">
-          <h1 className="text-4xl font-light tracking-tight text-white/90 mb-2">
-            ripple
-          </h1>
-          <p className="text-sm text-white/30">
-            Describe a goal. We'll map the path.
+    <div className="relative w-full h-screen bg-black overflow-hidden">
+      <TimelinePreview visible={phase === "prompt" || phase === "refining"} />
+
+      {/* Title */}
+      <div
+        className="absolute z-20 transition-all duration-[1200ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+        style={{
+          ...(titleInCenter
+            ? {
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -100px)",
+              }
+            : titleInTopLeft
+            ? {
+                top: "1.5rem",
+                left: "2rem",
+              }
+            : {
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -100px)",
+              }),
+        }}
+      >
+        <h1
+          className="font-title text-white leading-none tracking-wider transition-all duration-[1200ms]"
+          style={{
+            fontSize: titleInCenter ? "3.5rem" : titleInTopLeft ? "1.5rem" : "3rem",
+          }}
+        >
+          RIPPLE
+        </h1>
+        {titleInCenter && (
+          <p
+            className="font-body mt-4 text-center animate-fade-in tracking-wide"
+            style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.35)" }}
+          >
+            Where your goals come to life.
           </p>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Chat history */}
-      <ChatMessages messages={messages} />
-
-      {/* Input */}
-      <PromptInput
-        onSubmit={handleSubmit}
-        disabled={phase === "transitioning"}
-        placeholder={
-          isRefining
-            ? "Add more detail or say 'looks good'..."
-            : "What goal do you want to achieve?"
-        }
-      />
+      {/* Chat + Input */}
+      <div
+        style={{
+          position: "absolute",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "55%",
+          zIndex: 20,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "1rem",
+          ...(inputAtBottom
+            ? { bottom: "1.5rem" }
+            : titleInCenter
+            ? { top: "50%", marginTop: "20px" }
+            : { top: "50%", marginTop: "-25%" }),
+        }}
+      >
+        {showChat && <ChatMessages messages={messages} />}
+        <PromptInput
+          onSubmit={handleSubmit}
+          disabled={isTransitioning}
+          compact={inputAtBottom}
+          placeholder={
+            phase === "refining"
+              ? "Add more detail or say 'looks good'…"
+              : "What goal do you want to achieve?"
+          }
+        />
+      </div>
     </div>
   );
 }

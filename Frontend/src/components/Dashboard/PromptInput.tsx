@@ -1,14 +1,10 @@
-// ============================================================
-// Ripple – PromptInput Component
-// ============================================================
-
 import { useState, useRef, useEffect } from "react";
 
 interface PromptInputProps {
   onSubmit: (text: string) => void;
   disabled?: boolean;
   placeholder?: string;
-  compact?: boolean; // true when input is docked at bottom during timeline view
+  compact?: boolean;
 }
 
 export default function PromptInput({
@@ -20,12 +16,11 @@ export default function PromptInput({
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize textarea
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, compact ? 80 : 200) + "px";
+    el.style.height = Math.min(el.scrollHeight, compact ? 56 : 200) + "px";
   }, [value, compact]);
 
   const handleSubmit = () => {
@@ -33,6 +28,9 @@ export default function PromptInput({
     if (!trimmed || disabled) return;
     onSubmit(trimmed);
     setValue("");
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -42,16 +40,24 @@ export default function PromptInput({
     }
   };
 
+  const canSubmit = Boolean(value.trim()) && !disabled;
+
   return (
     <div
-      className={`
-        w-full max-w-2xl mx-auto
-        rounded-2xl border border-white/10
-        bg-white/5 backdrop-blur-md
-        transition-all duration-300
-        ${compact ? "px-4 py-2" : "px-6 py-4"}
-        ${disabled ? "opacity-50 pointer-events-none" : ""}
-      `}
+      style={{
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        gap: "0.75rem",
+        borderRadius: "9999px",
+        border: "1px solid rgba(255,255,255,0.15)",
+        background: "#1a1a1a",
+        padding: compact ? "0.5rem 1rem" : "0.75rem 1.25rem",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+        opacity: disabled ? 0.4 : 1,
+        pointerEvents: disabled ? "none" : "auto",
+        transition: "border-color 0.3s, box-shadow 0.3s",
+      }}
     >
       <textarea
         ref={textareaRef}
@@ -61,33 +67,51 @@ export default function PromptInput({
         placeholder={placeholder}
         disabled={disabled}
         rows={1}
-        className={`
-          w-full bg-transparent resize-none outline-none
-          text-white/90 placeholder-white/30
-          ${compact ? "text-sm" : "text-base"}
-        `}
+        style={{
+          flex: 1,
+          background: "transparent",
+          resize: "none",
+          outline: "none",
+          border: "none",
+          color: "rgba(255,255,255,0.9)",
+          fontFamily: "Saira, sans-serif",
+          fontSize: "0.875rem",
+          lineHeight: "1.6",
+          minHeight: "24px",
+          maxHeight: "200px",
+        }}
+        className="placeholder-white/30"
       />
 
-      <div className="flex items-center justify-between mt-2">
-        <span className="text-xs text-white/20">
-          {compact ? "" : "Shift + Enter for new line"}
-        </span>
-        <button
-          onClick={handleSubmit}
-          disabled={!value.trim() || disabled}
-          className={`
-            px-4 py-1.5 rounded-lg text-sm font-medium
-            transition-colors duration-200
-            ${
-              value.trim() && !disabled
-                ? "bg-white/10 text-white hover:bg-white/20"
-                : "bg-white/5 text-white/20 cursor-not-allowed"
-            }
-          `}
-        >
-          Send
-        </button>
-      </div>
+      <button
+        onClick={handleSubmit}
+        disabled={!canSubmit}
+        aria-label="Send"
+        style={{
+          flexShrink: 0,
+          width: "28px",
+          height: "28px",
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: canSubmit ? "white" : "rgba(255,255,255,0.1)",
+          color: canSubmit ? "black" : "rgba(255,255,255,0.2)",
+          cursor: canSubmit ? "pointer" : "not-allowed",
+          border: "none",
+          transition: "background 0.2s",
+        }}
+      >
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+          <path
+            d="M7 11.5V2.5M7 2.5L3 6.5M7 2.5L11 6.5"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
     </div>
   );
 }
