@@ -16,7 +16,7 @@ export default function TimelineScene({ onNodeClick }: TimelineSceneProps) {
 
   const positions = useMemo<[number, number, number][]>(
     () => steps.map((_, i) => [0, 0, -(i * TIMELINE_Z_SPACING)]),
-    [steps.length]
+    [steps],
   );
 
   return (
@@ -25,7 +25,7 @@ export default function TimelineScene({ onNodeClick }: TimelineSceneProps) {
       <pointLight position={[5, 5, 5]} intensity={0.8} />
       <pointLight position={[-5, -3, -10]} intensity={0.3} color="#4466ff" />
 
-      <TimelineCamera totalSteps={steps.length} />
+      <TimelineCamera activeIndex={nav.currentStepIndex} />
 
       {positions.map((pos, i) => {
         if (i === positions.length - 1) return null;

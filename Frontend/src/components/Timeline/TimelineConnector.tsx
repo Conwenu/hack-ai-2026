@@ -1,9 +1,5 @@
-// ============================================================
-// Ripple – TimelineConnector (line between nodes on z-axis)
-// ============================================================
-
 import { useMemo } from "react";
-import { Vector3, BufferGeometry, Float32BufferAttribute } from "three";
+import { BufferGeometry, Float32BufferAttribute } from "three";
 
 interface TimelineConnectorProps {
   from: [number, number, number];
@@ -24,13 +20,39 @@ export default function TimelineConnector({
   }, [from, to]);
 
   return (
-    <line geometry={geometry}>
-      {/* @ts-ignore — r3f line material typing */}
-      <lineBasicMaterial
-        color={active ? "#ffffff" : "#333333"}
-        transparent
-        opacity={active ? 0.6 : 0.2}
-      />
-    </line>
+    <group>
+      {/* Outer glow — thick, very transparent */}
+      <line geometry={geometry}>
+        {/* @ts-ignore */}
+        <lineBasicMaterial
+          color="#ff0000"
+          transparent
+          opacity={0.08}
+          linewidth={8}
+        />
+      </line>
+
+      {/* Mid glow — medium thickness */}
+      <line geometry={geometry}>
+        {/* @ts-ignore */}
+        <lineBasicMaterial
+          color="#ff2020"
+          transparent
+          opacity={active ? 0.25 : 0.08}
+          linewidth={4}
+        />
+      </line>
+
+      {/* Core line — bright and sharp */}
+      <line geometry={geometry}>
+        {/* @ts-ignore */}
+        <lineBasicMaterial
+          color={active ? "#ff4444" : "#660000"}
+          transparent
+          opacity={active ? 1 : 0.4}
+          linewidth={2}
+        />
+      </line>
+    </group>
   );
 }

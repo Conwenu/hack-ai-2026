@@ -50,10 +50,10 @@ export default function TimelineNode({
       >
         <octahedronGeometry args={[0.35, 0]} />
         <meshStandardMaterial
-          color={isActive ? "#ffffff" : "#555555"}
-          emissive={isActive ? "#ffffff" : "#222222"}
+          color={isActive ? "#ffffff" : "#aaaaaa"}
+          emissive={isActive ? "#ffffff" : "#555555"}
           emissiveIntensity={isActive ? 0.4 : 0.1}
-          wireframe={!isActive}
+          wireframe={false}
           transparent
           opacity={isActive ? 1 : 0.6}
         />

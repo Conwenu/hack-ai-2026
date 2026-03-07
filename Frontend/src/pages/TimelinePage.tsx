@@ -9,7 +9,12 @@ export default function TimelinePage() {
   const [activeModal, setActiveModal] = useState<TimelineStep | null>(null);
 
   return (
-    <div className="relative w-full h-screen bg-black overflow-hidden">
+    <div
+      className="relative w-full h-screen bg-black overflow-hidden"
+      tabIndex={0}
+      onKeyDown={(e) => e.preventDefault()}
+    >
+      {" "}
       <Canvas
         camera={{ position: [0, 1.5, 20], fov: 60 }}
         style={{ position: "absolute", inset: 0 }}
@@ -18,9 +23,7 @@ export default function TimelinePage() {
         <color attach="background" args={["#000000"]} />
         <TimelineScene onNodeClick={(step) => setActiveModal(step)} />
       </Canvas>
-
       <TimelineHUD />
-
       <NodeModal step={activeModal} onClose={() => setActiveModal(null)} />
     </div>
   );

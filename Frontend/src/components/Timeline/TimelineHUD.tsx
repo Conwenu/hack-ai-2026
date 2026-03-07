@@ -1,10 +1,41 @@
+import { useEffect, useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 
 export default function TimelineHUD() {
-  const { currentGoal, nav } = useAppStore();
+  const { currentGoal, nav, nextStep, prevStep } = useAppStore();
   const step = currentGoal?.steps[nav.currentStepIndex];
+  const [activeBtn, setActiveBtn] = useState<"prev" | "next" | null>(null);
+
+  const flash = (btn: "prev" | "next") => {
+    setActiveBtn(btn);
+    setTimeout(() => setActiveBtn(null), 200);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowDown") {
+        prevStep();
+        flash("prev");
+      }
+      if (e.key === "ArrowUp") {
+        nextStep();
+        flash("next");
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [nextStep, prevStep]);
 
   if (!step) return null;
+
+  const btnBase = {
+    flexShrink: 0,
+    padding: "6px 16px",
+    borderRadius: "9999px",
+    fontSize: "12px",
+    border: "1px solid rgba(255,255,255,0.12)",
+    transition: "all 0.2s",
+  };
 
   return (
     <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 10 }}>
@@ -101,6 +132,7 @@ export default function TimelineHUD() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          gap: "12px",
           padding: "0 2rem",
           borderTop: "1px solid rgba(255,255,255,0.06)",
           background: "rgba(0,0,0,0.4)",
@@ -108,9 +140,24 @@ export default function TimelineHUD() {
           pointerEvents: "auto",
         }}
       >
+        <button
+          onClick={() => { prevStep(); flash("prev"); }}
+          disabled={nav.currentStepIndex === 0}
+          style={{
+            ...btnBase,
+            color: "rgba(255,255,255,0.4)",
+            background: activeBtn === "prev" ? "rgba(255,255,255,0.15)" : "transparent",
+            cursor: nav.currentStepIndex === 0 ? "not-allowed" : "pointer",
+            opacity: nav.currentStepIndex === 0 ? 0.2 : 1,
+          }}
+        >
+          ← Prev
+        </button>
+
         <div
           style={{
-            width: "55%",
+            flex: 1,
+            maxWidth: "55%",
             padding: "10px 20px",
             borderRadius: "9999px",
             border: "1px solid rgba(255,255,255,0.12)",
@@ -125,7 +172,22 @@ export default function TimelineHUD() {
             {step.description}
           </p>
         </div>
+
+        <button
+          onClick={() => { nextStep(); flash("next"); }}
+          disabled={nav.currentStepIndex === nav.totalSteps - 1}
+          style={{
+            ...btnBase,
+            color: "rgba(255,255,255,0.4)",
+            background: activeBtn === "next" ? "rgba(255,255,255,0.15)" : "transparent",
+            cursor: nav.currentStepIndex === nav.totalSteps - 1 ? "not-allowed" : "pointer",
+            opacity: nav.currentStepIndex === nav.totalSteps - 1 ? 0.2 : 1,
+          }}
+        >
+          Next →
+        </button>
       </div>
+
     </div>
   );
 }
