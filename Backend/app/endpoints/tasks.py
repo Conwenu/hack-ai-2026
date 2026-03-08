@@ -16,6 +16,7 @@ class TaskStepNode(BaseModel):
 
 
 class GenerateTasksRequest(BaseModel):
+    userInput: str
     targetId: str
     steps: List[TaskStepNode]
 
@@ -36,7 +37,7 @@ def generate_tasks_endpoint(req: GenerateTasksRequest):
     ]
     
     try:
-        tasks = generate_tasks(req.targetId, step_nodes)
+        tasks = generate_tasks(req.userInput, req.targetId, step_nodes)
         return tasks
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

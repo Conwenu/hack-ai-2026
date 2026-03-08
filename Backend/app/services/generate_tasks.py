@@ -35,7 +35,7 @@ def new_id() -> str:
     return str(uuid.uuid4())
 
 
-def generate_tasks(target_id: str, steps: List[StepNode]) -> dict:
+def generate_tasks(user_input: str, target_id: str, steps: List[StepNode]) -> dict:
     """
     Generate atomic tasks (sub-tasks) for a given step.
     
@@ -43,13 +43,30 @@ def generate_tasks(target_id: str, steps: List[StepNode]) -> dict:
         - id: unique identifier
         - prevStep: list of ids pointing to previous nodes
         - nextStep: list of ids pointing to next nodes
+<<<<<<< ours
+<<<<<<< ours
+        - title: short action-oriented phrase
+        concise, complete sentence - subtitle: a (15-20 words max) that provides context or clarifies the task
+||||||| ancestor
         - title: short action-oriented phrase (e.g., 'Strengthen Jaw Muscles')
         concise, complete sentence - subtitle: a (15-20 words max) that provides context or clarifies the task
+=======
+        - title: short action-oriented phrase
+        - subtitle: a concise, complete sentence (15-20 words max) that provides context or clarifies the task
+>>>>>>> theirs
+||||||| ancestor
+        - title: short action-oriented phrase (e.g., 'Strengthen Jaw Muscles')
+        concise, complete sentence - subtitle: a (15-20 words max) that provides context or clarifies the task
+=======
+        - title: short action-oriented phrase
+        - subtitle: a concise, complete sentence (15-20 words max) that provides context or clarifies the task
+>>>>>>> theirs
         - text: a half to full paragraph describing the task in detail, including why it's important and any key details
     
     The LLM decides how many tasks are needed to complete the step.
     
     Args:
+        user_input: The original user prompt/goal that initiated this task generation
         target_id: The ID of the step to generate tasks for
         steps: List of all steps in the plan (for context)
     
@@ -84,7 +101,10 @@ def generate_tasks(target_id: str, steps: List[StepNode]) -> dict:
     context = "\n".join(context_parts)
 
     prompt = f"""
-Break down the current step into more atomic, actionable tasks.
+Break down the current step into more atomic, actionable tasks, keeping the user's original goal in mind.
+
+User's Original Goal:
+{user_input}
 
 {context}
 
@@ -113,7 +133,7 @@ Return the tasks as a JSON object with a "tasks" array, each containing "title",
     task_plan = task_planner_llm.invoke(prompt)
 
     nodes = []
-    prev_id = None
+    prev_id = target_id
     for task in task_plan.tasks:
         node_id = new_id()
         node = TaskNode(
