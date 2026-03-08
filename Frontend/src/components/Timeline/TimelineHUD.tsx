@@ -14,17 +14,19 @@ export default function TimelineHUD() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown") {
-        prevStep();
+        e.preventDefault();
+        useAppStore.getState().prevStep();
         flash("prev");
       }
       if (e.key === "ArrowUp") {
-        nextStep();
+        e.preventDefault();
+        useAppStore.getState().nextStep();
         flash("next");
       }
     };
-    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [nextStep, prevStep]);
+  }, []); // empty deps — handler never needs to be re-registered
 
   if (!step) return null;
 
@@ -38,8 +40,14 @@ export default function TimelineHUD() {
   };
 
   return (
-    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 10 }}>
-
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        pointerEvents: "none",
+        zIndex: 10,
+      }}
+    >
       {/* ══ Top bar ══ */}
       <div
         style={{
@@ -60,7 +68,12 @@ export default function TimelineHUD() {
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <p
             className="font-title"
-            style={{ fontSize: "1.3rem", color: "rgba(255,255,255,0.9)", letterSpacing: "0.05em", margin: 0 }}
+            style={{
+              fontSize: "1.3rem",
+              color: "rgba(255,255,255,0.9)",
+              letterSpacing: "0.05em",
+              margin: 0,
+            }}
           >
             RIPPLE
           </p>
@@ -97,12 +110,29 @@ export default function TimelineHUD() {
         </div>
 
         <div style={{ textAlign: "right" }}>
-          <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.28)", letterSpacing: "0.1em", margin: 0 }}>
+          <p
+            style={{
+              fontSize: "10px",
+              color: "rgba(255,255,255,0.28)",
+              letterSpacing: "0.1em",
+              margin: 0,
+            }}
+          >
             STEP
           </p>
-          <p style={{ fontSize: "1.1rem", color: "rgba(255,255,255,0.7)", fontWeight: 300, margin: 0 }}>
+          <p
+            style={{
+              fontSize: "1.1rem",
+              color: "rgba(255,255,255,0.7)",
+              fontWeight: 300,
+              margin: 0,
+            }}
+          >
             {nav.currentStepIndex + 1}
-            <span style={{ color: "rgba(255,255,255,0.2)" }}> / {nav.totalSteps}</span>
+            <span style={{ color: "rgba(255,255,255,0.2)" }}>
+              {" "}
+              / {nav.totalSteps}
+            </span>
           </p>
         </div>
       </div>
@@ -130,8 +160,14 @@ export default function TimelineHUD() {
               style={{
                 padding: "7px 10px",
                 borderRadius: "8px",
-                background: i === nav.currentStepIndex ? "rgba(255,255,255,0.07)" : "transparent",
-                border: i === nav.currentStepIndex ? "1px solid rgba(255,255,255,0.1)" : "1px solid transparent",
+                background:
+                  i === nav.currentStepIndex
+                    ? "rgba(255,255,255,0.07)"
+                    : "transparent",
+                border:
+                  i === nav.currentStepIndex
+                    ? "1px solid rgba(255,255,255,0.1)"
+                    : "1px solid transparent",
                 cursor: "pointer",
                 transition: "all 0.2s",
               }}
@@ -139,7 +175,10 @@ export default function TimelineHUD() {
               <p
                 style={{
                   fontSize: "10px",
-                  color: i === nav.currentStepIndex ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.28)",
+                  color:
+                    i === nav.currentStepIndex
+                      ? "rgba(255,255,255,0.85)"
+                      : "rgba(255,255,255,0.28)",
                   fontWeight: i === nav.currentStepIndex ? 600 : 400,
                   lineHeight: "1.5",
                   margin: 0,
@@ -174,12 +213,16 @@ export default function TimelineHUD() {
         }}
       >
         <button
-          onClick={() => { prevStep(); flash("prev"); }}
+          onClick={() => {
+            prevStep();
+            flash("prev");
+          }}
           disabled={nav.currentStepIndex === 0}
           style={{
             ...btnBase,
             color: "rgba(255,255,255,0.4)",
-            background: activeBtn === "prev" ? "rgba(255,255,255,0.15)" : "transparent",
+            background:
+              activeBtn === "prev" ? "rgba(255,255,255,0.15)" : "transparent",
             cursor: nav.currentStepIndex === 0 ? "not-allowed" : "pointer",
             opacity: nav.currentStepIndex === 0 ? 0.2 : 1,
           }}
@@ -198,29 +241,54 @@ export default function TimelineHUD() {
             boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
           }}
         >
-          <p style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.85)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <p
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+              color: "rgba(255,255,255,0.85)",
+              margin: 0,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
             {step.title}
           </p>
-          <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", margin: "3px 0 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <p
+            style={{
+              fontSize: "11px",
+              color: "rgba(255,255,255,0.35)",
+              margin: "3px 0 0 0",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
             {step.description}
           </p>
         </div>
 
         <button
-          onClick={() => { nextStep(); flash("next"); }}
+          onClick={() => {
+            nextStep();
+            flash("next");
+          }}
           disabled={nav.currentStepIndex === nav.totalSteps - 1}
           style={{
             ...btnBase,
             color: "rgba(255,255,255,0.4)",
-            background: activeBtn === "next" ? "rgba(255,255,255,0.15)" : "transparent",
-            cursor: nav.currentStepIndex === nav.totalSteps - 1 ? "not-allowed" : "pointer",
+            background:
+              activeBtn === "next" ? "rgba(255,255,255,0.15)" : "transparent",
+            cursor:
+              nav.currentStepIndex === nav.totalSteps - 1
+                ? "not-allowed"
+                : "pointer",
             opacity: nav.currentStepIndex === nav.totalSteps - 1 ? 0.2 : 1,
           }}
         >
           Next →
         </button>
       </div>
-
     </div>
   );
 }

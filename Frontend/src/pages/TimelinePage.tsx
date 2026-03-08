@@ -10,17 +10,12 @@ export default function TimelinePage() {
   const [entered, setEntered] = useState(false);
 
   useEffect(() => {
-    // Small delay so the CSS animation has time to kick in
     const t = setTimeout(() => setEntered(true), 100);
     return () => clearTimeout(t);
   }, []);
 
   return (
-    <div
-      className="relative w-full h-screen bg-black overflow-hidden"
-      tabIndex={0}
-      onKeyDown={(e) => e.preventDefault()}
-    >
+    <div className="relative w-full h-screen bg-black overflow-hidden">
       {/* 3D Canvas — fades and scales in */}
       <div
         style={{
