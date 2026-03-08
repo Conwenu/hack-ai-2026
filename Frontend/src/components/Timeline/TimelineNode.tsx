@@ -9,6 +9,7 @@ interface TimelineNodeProps {
   position: [number, number, number];
   isActive: boolean;
   modalOpen: boolean;
+  isBranch: boolean;
   onClick: () => void;
 }
 
@@ -17,6 +18,7 @@ export default function TimelineNode({
   position,
   isActive,
   modalOpen,
+  isBranch,
   onClick,
 }: TimelineNodeProps) {
   const meshRef = useRef<Mesh>(null);
@@ -31,7 +33,10 @@ export default function TimelineNode({
     meshRef.current.rotation.x += delta * (isActive ? 0.3 : 0.1);
 
     const target = isActive ? 1.35 : hovered ? 1.15 : 1;
-    meshRef.current.scale.lerp({ x: target, y: target, z: target } as any, 0.1);
+    meshRef.current.scale.lerp(
+      { x: target, y: target, z: target } as any,
+      0.1
+    );
 
     if (ringRef.current) {
       ringRef.current.rotation.z += delta * (isActive ? -1.2 : -0.5);
@@ -40,7 +45,7 @@ export default function TimelineNode({
       const ringTarget = isActive ? 1.5 : hovered ? 1.2 : 0.85;
       ringRef.current.scale.lerp(
         { x: ringTarget, y: ringTarget, z: ringTarget } as any,
-        0.08,
+        0.08
       );
     }
 
@@ -53,12 +58,17 @@ export default function TimelineNode({
   const showHoverLabel = hovered && !isActive && !modalOpen;
   const showActiveLabel = isActive && !modalOpen;
 
-  const nodeColor = isActive ? "#ffffff" : hovered ? "#67e8f9" : "#0891b2";
-  const emissiveColor = isActive ? "#ffffff" : hovered ? "#22d3ee" : "#0e7490";
-  const emissiveIntensity = isActive ? 0.6 : hovered ? 0.9 : 0.4;
+  const scale = isBranch ? 0.65 : 1;
+  const nodeColor = isBranch
+    ? "#a78bfa"
+    : isActive ? "#ffffff" : hovered ? "#67e8f9" : "#0891b2";
+  const emissiveColor = isBranch
+    ? "#7c3aed"
+    : isActive ? "#ffffff" : hovered ? "#22d3ee" : "#0e7490";
+  const emissiveIntensity = isBranch ? 0.5 : isActive ? 0.6 : hovered ? 0.9 : 0.4;
 
   return (
-    <group position={position}>
+    <group position={position} scale={[scale, scale, scale]}>
       {/* Outer wireframe octahedron */}
       <mesh
         ref={meshRef}
@@ -119,8 +129,8 @@ export default function TimelineNode({
       <mesh>
         <octahedronGeometry args={[0.42, 0]} />
         <meshStandardMaterial
-          color="#f59e0b"
-          emissive="#b45309"
+          color={isBranch ? "#7c3aed" : "#06b6d4"}
+          emissive={isBranch ? "#4c1d95" : "#0e7490"}
           emissiveIntensity={isActive ? 1.8 : hovered ? 1.2 : 0.5}
           wireframe={true}
           transparent
@@ -128,6 +138,7 @@ export default function TimelineNode({
         />
       </mesh>
 
+      {/* Hover label */}
       {showHoverLabel && (
         <Html
           position={[0.7, 0.45, 0]}
@@ -161,6 +172,7 @@ export default function TimelineNode({
         </Html>
       )}
 
+      {/* Active label */}
       {showActiveLabel && (
         <Html
           position={[0.7, 0.45, 0]}

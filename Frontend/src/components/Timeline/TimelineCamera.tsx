@@ -7,12 +7,14 @@ interface TimelineCameraProps {
   activeIndex: number;
 }
 
+const BRANCH_X_OFFSET = 3.2; // Must match TimelineScene
+
 const LEFT_DRAG_SPEED = 0.04;
 const MIDDLE_DRAG_SPEED = 0.015;
 const LERP_POS = 0.08;
 const LERP_Z = 0.06;
 const DRAG_THRESHOLD = 3;
-const Z_PADDING = 8; // how far past the first/last node you can travel
+const Z_PADDING = 8;
 
 export default function TimelineCamera({ activeIndex }: TimelineCameraProps) {
   const { camera, gl } = useThree();
@@ -25,19 +27,45 @@ export default function TimelineCamera({ activeIndex }: TimelineCameraProps) {
   const isMiddleDragging = useRef(false);
   const middleLastMouse = useRef({ x: 0, y: 0 });
 
-  const baseZ = useRef(-(activeIndex * TIMELINE_Z_SPACING) + CAMERA_Z_OFFSET);
   const panOffset = useRef({ x: 0, y: 0, z: 0 });
   const fovTarget = useRef(60);
 
   const current = useRef({
     x: 0,
     y: 1.5,
-    z: baseZ.current,
+    z: CAMERA_Z_OFFSET,
   });
 
-  useEffect(() => {
-    baseZ.current = -(activeIndex * TIMELINE_Z_SPACING) + CAMERA_Z_OFFSET;
-  }, [activeIndex]);
+  // Compute target position from the store's nav location
+  const getTargetFromStore = () => {
+    const state = useAppStore.getState();
+    const { location } = state.nav;
+    const goal = state.currentGoal;
+
+    let targetX = 0;
+    let targetZ = 0;
+
+    if (location.branchId === "main") {
+      targetZ = -(location.stepIndex * TIMELINE_Z_SPACING);
+    } else if (goal) {
+      const branch = goal.branches.find((b) => b.id === location.branchId);
+      if (branch) {
+        const parentIdx = goal.steps.findIndex(
+          (s) => s.id === branch.parentStepId
+        );
+        // Find which branch offset this is (if multiple branches from same parent)
+        const parentBranches = goal.branches.filter(
+          (b) => b.parentStepId === branch.parentStepId
+        );
+        const branchOffset = parentBranches.findIndex((b) => b.id === branch.id);
+        targetX = BRANCH_X_OFFSET * (branchOffset + 1);
+        const parentZ = parentIdx * TIMELINE_Z_SPACING;
+        targetZ = -(parentZ + (location.stepIndex + 1) * TIMELINE_Z_SPACING);
+      }
+    }
+
+    return { x: targetX, z: targetZ };
+  };
 
   useEffect(() => {
     const onRefocus = () => {
@@ -48,27 +76,15 @@ export default function TimelineCamera({ activeIndex }: TimelineCameraProps) {
     return () => window.removeEventListener("timeline-refocus", onRefocus);
   }, []);
 
-  // Clamp the Z pan offset so you can't fly infinitely past the timeline
-  const clampZ = () => {
-    const totalSteps = useAppStore.getState().nav.totalSteps;
-    const timelineLength = (totalSteps - 1) * TIMELINE_Z_SPACING;
-    // Max forward (positive Z) = can't go much past the first node
-    // Max backward (negative Z) = can't go much past the last node
-    const maxForward = Z_PADDING;
-    const maxBackward = -(timelineLength + Z_PADDING) + baseZ.current - CAMERA_Z_OFFSET;
-    // panOffset.z shifts the camera: positive = forward, negative = backward
-    // We need to figure bounds relative to baseZ
-    const minZ = -(timelineLength + Z_PADDING) - baseZ.current + CAMERA_Z_OFFSET;
-    const maxZ = Z_PADDING - baseZ.current + CAMERA_Z_OFFSET;
-    panOffset.current.z = Math.max(minZ, Math.min(maxZ, panOffset.current.z));
-  };
-
   useEffect(() => {
     const canvas = gl.domElement;
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      fovTarget.current = Math.min(100, Math.max(20, fovTarget.current + e.deltaY * 0.05));
+      fovTarget.current = Math.min(
+        100,
+        Math.max(20, fovTarget.current + e.deltaY * 0.05)
+      );
     };
 
     const onPointerDown = (e: PointerEvent) => {
@@ -88,23 +104,28 @@ export default function TimelineCamera({ activeIndex }: TimelineCameraProps) {
       if (isLeftDragging.current) {
         const totalDx = e.clientX - leftDragStart.current.x;
         const totalDy = e.clientY - leftDragStart.current.y;
-        if (!leftDidDrag.current && Math.hypot(totalDx, totalDy) > DRAG_THRESHOLD) {
+        if (
+          !leftDidDrag.current &&
+          Math.hypot(totalDx, totalDy) > DRAG_THRESHOLD
+        ) {
           leftDidDrag.current = true;
           canvas.style.pointerEvents = "none";
           canvas.setPointerCapture(e.pointerId);
         }
 
         if (leftDidDrag.current) {
-          const dy = (e.clientY - leftLastMouse.current.y) * LEFT_DRAG_SPEED;
+          const dy =
+            (e.clientY - leftLastMouse.current.y) * LEFT_DRAG_SPEED;
           panOffset.current.z -= dy;
-          clampZ();
         }
         leftLastMouse.current = { x: e.clientX, y: e.clientY };
       }
 
       if (isMiddleDragging.current) {
-        const dx = (e.clientX - middleLastMouse.current.x) * MIDDLE_DRAG_SPEED;
-        const dy = (e.clientY - middleLastMouse.current.y) * MIDDLE_DRAG_SPEED;
+        const dx =
+          (e.clientX - middleLastMouse.current.x) * MIDDLE_DRAG_SPEED;
+        const dy =
+          (e.clientY - middleLastMouse.current.y) * MIDDLE_DRAG_SPEED;
         panOffset.current.x -= dx;
         panOffset.current.y += dy;
         middleLastMouse.current = { x: e.clientX, y: e.clientY };
@@ -114,7 +135,11 @@ export default function TimelineCamera({ activeIndex }: TimelineCameraProps) {
     const onPointerUp = (e: PointerEvent) => {
       if (e.button === 0) {
         if (leftDidDrag.current) {
-          try { canvas.releasePointerCapture(e.pointerId); } catch { /* ok */ }
+          try {
+            canvas.releasePointerCapture(e.pointerId);
+          } catch {
+            /* ok */
+          }
           requestAnimationFrame(() => {
             canvas.style.pointerEvents = "auto";
           });
@@ -139,9 +164,11 @@ export default function TimelineCamera({ activeIndex }: TimelineCameraProps) {
   }, [gl]);
 
   useFrame(() => {
-    const targetX = panOffset.current.x;
+    const target = getTargetFromStore();
+
+    const targetX = target.x + panOffset.current.x;
     const targetY = 1.5 + panOffset.current.y;
-    const targetZ = baseZ.current + panOffset.current.z;
+    const targetZ = target.z + CAMERA_Z_OFFSET + panOffset.current.z;
 
     current.current.x += (targetX - current.current.x) * LERP_POS;
     current.current.y += (targetY - current.current.y) * LERP_POS;
@@ -154,13 +181,13 @@ export default function TimelineCamera({ activeIndex }: TimelineCameraProps) {
     camera.position.set(
       current.current.x,
       current.current.y,
-      current.current.z,
+      current.current.z
     );
 
     camera.lookAt(
       current.current.x,
       0,
-      current.current.z - CAMERA_Z_OFFSET,
+      current.current.z - CAMERA_Z_OFFSET
     );
   });
 

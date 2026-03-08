@@ -1,20 +1,14 @@
-// ============================================================
-// Ripple – Core Type Definitions
-// ============================================================
-
-/** A single atomic step inside a goal timeline. */
 export interface TimelineStep {
   id: string;
   index: number;
   title: string;
   description: string;
-  duration?: string;          // e.g. "2 weeks"
+  duration?: string;
   status: "pending" | "active" | "completed";
-  branchId?: string;          // links to a Branch if this step spawns one
+  branchId?: string;
   metadata?: Record<string, unknown>;
 }
 
-/** A branch represents an alternative path or sub-goal. */
 export interface Branch {
   id: string;
   parentStepId: string;
@@ -22,11 +16,10 @@ export interface Branch {
   steps: TimelineStep[];
 }
 
-/** The top-level goal object returned by the backend. */
 export interface Goal {
   id: string;
-  raw_prompt: string;          // what the user originally typed
-  refined_prompt: string;      // after Gemini refinement
+  raw_prompt: string;
+  refined_prompt: string;
   title: string;
   summary: string;
   steps: TimelineStep[];
@@ -35,7 +28,6 @@ export interface Goal {
   updatedAt: string;
 }
 
-/** Chat message between user and AI during goal refinement. */
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
@@ -43,20 +35,40 @@ export interface ChatMessage {
   timestamp: string;
 }
 
-/** The current phase of the app experience. */
 export type AppPhase = "prompt" | "refining" | "transitioning" | "timeline";
 
-/** Backend API response wrapper. */
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
 }
 
-/** Timeline camera / navigation state. */
+// ─── Navigation types ───────────────────────────────────────
+
+/** Identifies where the user is in the tree */
+export interface NodeLocation {
+  /** "main" or the branch id */
+  branchId: "main" | string;
+  /** Index within that branch's step array */
+  stepIndex: number;
+}
+
+/** What the user can see from their current position */
+export interface NodeContext {
+  current: TimelineStep | null;
+  previous: TimelineStep | null;
+  /** Could be multiple if the step has branches forking off */
+  next: TimelineStep[];
+  /** Sibling branches at this depth (for left/right nav) */
+  siblings: { branchId: "main" | string; step: TimelineStep }[];
+  location: NodeLocation;
+}
+
 export interface TimelineNavState {
-  currentStepIndex: number;
-  totalSteps: number;
+  /** Where the user currently is in the tree */
+  location: NodeLocation;
+  /** Cached context for current position */
+  context: NodeContext;
   isAnimating: boolean;
   zoomLevel: number;
 }
