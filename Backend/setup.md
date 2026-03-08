@@ -18,7 +18,7 @@ copy .env.example .env
 
 #### **Configure Environment Variables**
 ```
-GOOG_API_KEY=YOUR_API_KEY
+GOOGLE_API_KEY=YOUR_API_KEY
 ```
 
 ## Notes

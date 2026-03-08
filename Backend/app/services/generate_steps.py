@@ -4,10 +4,7 @@ from typing import List
 from pydantic import BaseModel, Field
 from .llm_service import llm
 
-llm = ChatOllama(
-    model="llama3.1:8b", 
-    temperature=0
-)
+from app.services.llm_service import llm
 
 class StepNode(BaseModel):
     id: str

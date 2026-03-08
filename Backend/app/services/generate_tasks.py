@@ -4,10 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from .llm_service import llm
 
-llm = ChatOllama(
-    model="llama3.1:8b", 
-    temperature=0
-)
+from app.services.llm_service import llm
 
 class StepNode(BaseModel):
     id: str
@@ -43,7 +40,7 @@ def generate_tasks(user_input: str, target_id: str, steps: List[StepNode]) -> di
         - id: unique identifier
         - prevStep: list of ids pointing to previous nodes
         - nextStep: list of ids pointing to next nodes
-        - title: short action-oriented phrase (e.g., 'Learn the Basics')
+        - title: short action-oriented phrase
         - subtitle: a concise, complete sentence (15-20 words max) that provides context or clarifies the step
         - text: a half to full paragraph describing the step in detail, including why it's important and any key details
     
