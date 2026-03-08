@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Narration API Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .step {
+            background: white;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #444;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        textarea {
+            min-height: 60px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+        }
+        .output {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .chunk {
+            background: #e9ecef;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        audio {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .error {
+            color: red;
+        }
+        #stream-audio {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Narration API Tester</h1>
+    <p>Test the <code>/narration/</code> (non‑streaming) and <code>/narration/stream</code> endpoints.</p>
+
+    <!-- Single audio element for streaming playback -->
+    <audio id="stream-audio" controls style="display: none;"></audio>
+
+    <div class="step">
+        <h3>Current Step</h3>
+        <label>ID: <input type="text" id="current-id" value="step2"></label>
+        <label>Index: <input type="number" id="current-index" value="2"></label>
+        <label>Title: <input type="text" id="current-title" value="Moon Landing"></label>
+        <label>Subtitle: <input type="text" id="current-subtitle" value="1969"></label>
+        <label>Full Text: <textarea id="current-text">Apollo 11 lands on the moon. Neil Armstrong takes the first step.</textarea></label>
+    </div>
+
+    <div class="step">
+        <h3>Previous Step (optional)</h3>
+        <label>ID: <input type="text" id="prev-id" value="step1"></label>
+        <label>Index: <input type="number" id="prev-index" value="1"></label>
+        <label>Title: <input type="text" id="prev-title" value="Space Race Begins"></label>
+        <label>Subtitle: <input type="text" id="prev-subtitle" value="1957"></label>
+        <label>Full Text: <textarea id="prev-text">Sputnik is launched, starting the space race.</textarea></label>
+    </div>
+
+    <div>
+        <button id="nonstream-btn">Send Non‑Streaming Request</button>
+        <button id="stream-btn">Start Streaming</button>
+        <button id="stop-stream-btn" disabled>Stop Stream</button>
+    </div>
+
+    <div class="output" id="output">
+        <h2>Output</h2>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const nonstreamBtn = document.getElementById('nonstream-btn');
+        const streamBtn = document.getElementById('stream-btn');
+        const stopStreamBtn = document.getElementById('stop-stream-btn');
+        const resultDiv = document.getElementById('result');
+        const streamAudio = document.getElementById('stream-audio');
+
+        // Queue for audio chunks
+        let audioQueue = [];
+        let isPlaying = false;
+
+        // Setup audio ended event to play next chunk
+        streamAudio.addEventListener('ended', () => {
+            isPlaying = false;
+            if (audioQueue.length > 0) {
+                playNextAudio();
+            }
+        });
+
+        function playNextAudio() {
+            if (audioQueue.length === 0) {
+                isPlaying = false;
+                return;
+            }
+            const dataUrl = audioQueue.shift();
+            streamAudio.src = dataUrl;
+            streamAudio.play().catch(e => console.warn('Playback failed:', e));
+            isPlaying = true;
+        }
+
+        function queueAudio(base64Data) {
+            const dataUrl = `data:audio/mpeg;base64,${base64Data}`;
+            audioQueue.push(dataUrl);
+            if (!isPlaying) {
+                playNextAudio();
+            }
+        }
+
+        function clearQueue() {
+            audioQueue = [];
+            isPlaying = false;
+            streamAudio.pause();
+            streamAudio.removeAttribute('src');
+            streamAudio.load(); // Reset
+        }
+
+        function buildRequestData() {
+            const current = {
+                id: document.getElementById('current-id').value,
+                index: parseInt(document.getElementById('current-index').value),
+                title: document.getElementById('current-title').value,
+                subtitle: document.getElementById('current-subtitle').value,
+                fullText: document.getElementById('current-text').value
+            };
+            const prevId = document.getElementById('prev-id').value;
+            const prevIndex = document.getElementById('prev-index').value;
+            const prevTitle = document.getElementById('prev-title').value;
+            const prevSubtitle = document.getElementById('prev-subtitle').value;
+            const prevText = document.getElementById('prev-text').value;
+
+            const previous = (prevId || prevIndex || prevTitle || prevSubtitle || prevText)
+                ? {
+                    id: prevId,
+                    index: parseInt(prevIndex) || 0,
+                    title: prevTitle,
+                    subtitle: prevSubtitle,
+                    fullText: prevText
+                }
+                : null;
+
+            return { current, previous };
+        }
+
+        function displayError(msg) {
+            resultDiv.innerHTML = `<p class="error">${msg}</p>`;
+        }
+
+        function clearOutput() {
+            resultDiv.innerHTML = '';
+        }
+
+        // Non‑streaming request
+        nonstreamBtn.addEventListener('click', async () => {
+            clearOutput();
+            clearQueue(); // Stop any ongoing stream playback
+            const data = buildRequestData();
+
+            try {
+                const response = await fetch('/narration/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    const err = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${err}`);
+                }
+
+                const result = await response.json();
+                displayNonStreamResult(result);
+            } catch (err) {
+                displayError(`Request failed: ${err.message}`);
+            }
+        });
+
+        function displayNonStreamResult(result) {
+            const html = `
+                <h3>Narration Text</h3>
+                <p>${result.text}</p>
+                <h3>Audio</h3>
+                <audio controls src="data:audio/mpeg;base64,${result.audio_base64}"></audio>
+            `;
+            resultDiv.innerHTML = html;
+        }
+
+        // Streaming request
+        streamBtn.addEventListener('click', () => {
+            clearOutput();
+            clearQueue(); // Stop any ongoing playback and clear queue
+            streamAudio.style.display = 'block'; // Show audio player
+
+            const data = buildRequestData();
+            fetch('/narration/stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).then(async (response) => {
+                if (!response.ok) {
+                    const err = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${err}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                stopStreamBtn.disabled = false;
+                streamBtn.disabled = true;
+
+                function read() {
+                    reader.read().then(({ done, value }) => {
+                        if (done) {
+                            stopStreamBtn.disabled = true;
+                            streamBtn.disabled = false;
+                            return;
+                        }
+
+                        buffer += decoder.decode(value, { stream: true });
+                        const messages = buffer.split('\n\n');
+                        buffer = messages.pop();
+
+                        for (const msg of messages) {
+                            if (msg.startsWith('data: ')) {
+                                const jsonStr = msg.slice(6);
+                                try {
+                                    const event = JSON.parse(jsonStr);
+                                    handleStreamEvent(event);
+                                } catch (e) {
+                                    console.warn('Failed to parse event:', jsonStr);
+                                }
+                            }
+                        }
+
+                        read();
+                    }).catch(err => {
+                        displayError(`Stream error: ${err.message}`);
+                        stopStream();
+                    });
+                }
+
+                read();
+            }).catch(err => {
+                displayError(`Stream request failed: ${err.message}`);
+                stopStream();
+            });
+        });
+
+        function handleStreamEvent(event) {
+            if (event.type === 'start') {
+                resultDiv.innerHTML += '<p><em>Stream started...</em></p>';
+            } else if (event.type === 'chunk') {
+                // Display the text chunk
+                const chunkDiv = document.createElement('div');
+                chunkDiv.className = 'chunk';
+                chunkDiv.innerHTML = `<p><strong>Chunk:</strong> ${event.text}</p>`;
+                resultDiv.appendChild(chunkDiv);
+
+                // Queue the audio for playback
+                queueAudio(event.audio);
+            } else if (event.type === 'done') {
+                resultDiv.innerHTML += '<p><strong>Stream finished.</strong></p>';
+                stopStream();
+            }
+        }
+
+        function stopStream() {
+            // Note: we don't clear the queue here, because we want to finish playing queued chunks.
+            // But we do disable the stop button and re-enable the start button.
+            stopStreamBtn.disabled = true;
+            streamBtn.disabled = false;
+        }
+
+        stopStreamBtn.addEventListener('click', () => {
+            // User clicked stop: clear queue and stop current playback
+            clearQueue();
+            stopStream();
+        });
+    </script>
+</body>
+</html>

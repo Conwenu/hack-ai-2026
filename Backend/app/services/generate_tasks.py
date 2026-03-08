@@ -37,33 +37,17 @@ def new_id() -> str:
 
 def generate_tasks(user_input: str, target_id: str, steps: List[StepNode]) -> dict:
     """
-    Generate atomic tasks (sub-tasks) for a given step.
+    Generate initial actionable steps for a goal with graph schema.
     
-    Each task is a node with:
+    Each step is a node with:
         - id: unique identifier
         - prevStep: list of ids pointing to previous nodes
         - nextStep: list of ids pointing to next nodes
-<<<<<<< ours
-<<<<<<< ours
-        - title: short action-oriented phrase
-        concise, complete sentence - subtitle: a (15-20 words max) that provides context or clarifies the task
-||||||| ancestor
-        - title: short action-oriented phrase (e.g., 'Strengthen Jaw Muscles')
-        concise, complete sentence - subtitle: a (15-20 words max) that provides context or clarifies the task
-=======
-        - title: short action-oriented phrase
-        - subtitle: a concise, complete sentence (15-20 words max) that provides context or clarifies the task
->>>>>>> theirs
-||||||| ancestor
-        - title: short action-oriented phrase (e.g., 'Strengthen Jaw Muscles')
-        concise, complete sentence - subtitle: a (15-20 words max) that provides context or clarifies the task
-=======
-        - title: short action-oriented phrase
-        - subtitle: a concise, complete sentence (15-20 words max) that provides context or clarifies the task
->>>>>>> theirs
-        - text: a half to full paragraph describing the task in detail, including why it's important and any key details
+        - title: short action-oriented phrase (e.g., 'Learn the Basics')
+        - subtitle: a concise, complete sentence (15-20 words max) that provides context or clarifies the step
+        - text: a half to full paragraph describing the step in detail, including why it's important and any key details
     
-    The LLM decides how many tasks are needed to complete the step.
+    The LLM decides how many steps are needed.
     
     Args:
         user_input: The original user prompt/goal that initiated this task generation
