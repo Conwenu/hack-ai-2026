@@ -1,12 +1,18 @@
 export interface TimelineStep {
-  id: string;
-  index: number;
-  title: string;
-  description: string;
-  duration?: string;
-  status: "pending" | "active" | "completed";
-  branchId?: string;
-  metadata?: Record<string, unknown>;
+  id: string
+  index: number
+  title: string
+  description: string
+  
+  fullText?: string
+  subtitle?: string
+
+  duration?: string
+  status: "pending" | "active" | "completed"
+  branchId?: string
+
+  prevId?: string | null
+  nextIds?: string[]; 
 }
 
 export interface Branch {
