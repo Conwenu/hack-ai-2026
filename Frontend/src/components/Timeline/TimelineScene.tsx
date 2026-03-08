@@ -8,9 +8,10 @@ import type { TimelineStep } from "../../types";
 
 interface TimelineSceneProps {
   onNodeClick: (step: TimelineStep) => void;
+  modalOpen: boolean;
 }
 
-export default function TimelineScene({ onNodeClick }: TimelineSceneProps) {
+export default function TimelineScene({ onNodeClick, modalOpen }: TimelineSceneProps) {
   const { currentGoal, nav, goToStep } = useAppStore();
   const steps = currentGoal?.steps ?? [];
 
@@ -45,6 +46,7 @@ export default function TimelineScene({ onNodeClick }: TimelineSceneProps) {
           step={step}
           position={positions[i]}
           isActive={i === nav.currentStepIndex}
+          modalOpen={modalOpen}
           onClick={() => {
             goToStep(i);
             onNodeClick(step);

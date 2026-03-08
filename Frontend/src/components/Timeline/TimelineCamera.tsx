@@ -1,25 +1,67 @@
 import { useRef, useEffect } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
-import { TIMELINE_Z_SPACING } from "../../animations/config";
+import { TIMELINE_Z_SPACING, CAMERA_Z_OFFSET } from "../../animations/config";
+import { useAppStore } from "../../stores/useAppStore";
 
 interface TimelineCameraProps {
   activeIndex: number;
 }
 
+const LEFT_DRAG_SPEED = 0.04;
+const MIDDLE_DRAG_SPEED = 0.015;
+const LERP_POS = 0.08;
+const LERP_Z = 0.06;
+const DRAG_THRESHOLD = 3;
+const Z_PADDING = 8; // how far past the first/last node you can travel
+
 export default function TimelineCamera({ activeIndex }: TimelineCameraProps) {
   const { camera, gl } = useThree();
 
-  const isOrbiting = useRef(false);
-  const lastMouse = useRef({ x: 0, y: 0 });
+  const isLeftDragging = useRef(false);
+  const leftDragStart = useRef({ x: 0, y: 0 });
+  const leftLastMouse = useRef({ x: 0, y: 0 });
+  const leftDidDrag = useRef(false);
 
-  const target = useRef({ x: 0, y: 1.5, z: 6 });
-  const current = useRef({ x: 0, y: 1.5, z: 6 });
+  const isMiddleDragging = useRef(false);
+  const middleLastMouse = useRef({ x: 0, y: 0 });
+
+  const baseZ = useRef(-(activeIndex * TIMELINE_Z_SPACING) + CAMERA_Z_OFFSET);
+  const panOffset = useRef({ x: 0, y: 0, z: 0 });
   const fovTarget = useRef(60);
 
+  const current = useRef({
+    x: 0,
+    y: 1.5,
+    z: baseZ.current,
+  });
+
   useEffect(() => {
-    const targetZ = -(activeIndex * TIMELINE_Z_SPACING) + 6;
-    target.current.z = targetZ;
+    baseZ.current = -(activeIndex * TIMELINE_Z_SPACING) + CAMERA_Z_OFFSET;
   }, [activeIndex]);
+
+  useEffect(() => {
+    const onRefocus = () => {
+      panOffset.current = { x: 0, y: 0, z: 0 };
+      fovTarget.current = 60;
+    };
+    window.addEventListener("timeline-refocus", onRefocus);
+    return () => window.removeEventListener("timeline-refocus", onRefocus);
+  }, []);
+
+  // Clamp the Z pan offset so you can't fly infinitely past the timeline
+  const clampZ = () => {
+    const totalSteps = useAppStore.getState().nav.totalSteps;
+    const timelineLength = (totalSteps - 1) * TIMELINE_Z_SPACING;
+    // Max forward (positive Z) = can't go much past the first node
+    // Max backward (negative Z) = can't go much past the last node
+    const maxForward = Z_PADDING;
+    const maxBackward = -(timelineLength + Z_PADDING) + baseZ.current - CAMERA_Z_OFFSET;
+    // panOffset.z shifts the camera: positive = forward, negative = backward
+    // We need to figure bounds relative to baseZ
+    const minZ = -(timelineLength + Z_PADDING) - baseZ.current + CAMERA_Z_OFFSET;
+    const maxZ = Z_PADDING - baseZ.current + CAMERA_Z_OFFSET;
+    panOffset.current.z = Math.max(minZ, Math.min(maxZ, panOffset.current.z));
+  };
 
   useEffect(() => {
     const canvas = gl.domElement;
@@ -29,72 +71,97 @@ export default function TimelineCamera({ activeIndex }: TimelineCameraProps) {
       fovTarget.current = Math.min(100, Math.max(20, fovTarget.current + e.deltaY * 0.05));
     };
 
-    const onMouseDown = (e: MouseEvent) => {
-      if (e.button === 1) {
-        isOrbiting.current = true;
-        lastMouse.current = { x: e.clientX, y: e.clientY };
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.button === 0) {
+        isLeftDragging.current = true;
+        leftDidDrag.current = false;
+        leftDragStart.current = { x: e.clientX, y: e.clientY };
+        leftLastMouse.current = { x: e.clientX, y: e.clientY };
+      } else if (e.button === 1) {
+        isMiddleDragging.current = true;
+        middleLastMouse.current = { x: e.clientX, y: e.clientY };
         e.preventDefault();
       }
     };
 
-    const onMouseMove = (e: MouseEvent) => {
-      if (!isOrbiting.current) return;
-      const dx = (e.clientX - lastMouse.current.x) * 0.015;
-      const dy = (e.clientY - lastMouse.current.y) * 0.015;
-      target.current.x -= dx;
-      target.current.y += dy;
-      lastMouse.current = { x: e.clientX, y: e.clientY };
+    const onPointerMove = (e: PointerEvent) => {
+      if (isLeftDragging.current) {
+        const totalDx = e.clientX - leftDragStart.current.x;
+        const totalDy = e.clientY - leftDragStart.current.y;
+        if (!leftDidDrag.current && Math.hypot(totalDx, totalDy) > DRAG_THRESHOLD) {
+          leftDidDrag.current = true;
+          canvas.style.pointerEvents = "none";
+          canvas.setPointerCapture(e.pointerId);
+        }
+
+        if (leftDidDrag.current) {
+          const dy = (e.clientY - leftLastMouse.current.y) * LEFT_DRAG_SPEED;
+          panOffset.current.z -= dy;
+          clampZ();
+        }
+        leftLastMouse.current = { x: e.clientX, y: e.clientY };
+      }
+
+      if (isMiddleDragging.current) {
+        const dx = (e.clientX - middleLastMouse.current.x) * MIDDLE_DRAG_SPEED;
+        const dy = (e.clientY - middleLastMouse.current.y) * MIDDLE_DRAG_SPEED;
+        panOffset.current.x -= dx;
+        panOffset.current.y += dy;
+        middleLastMouse.current = { x: e.clientX, y: e.clientY };
+      }
     };
 
-    const onMouseUp = (e: MouseEvent) => {
-      if (e.button === 1) isOrbiting.current = false;
+    const onPointerUp = (e: PointerEvent) => {
+      if (e.button === 0) {
+        if (leftDidDrag.current) {
+          try { canvas.releasePointerCapture(e.pointerId); } catch { /* ok */ }
+          requestAnimationFrame(() => {
+            canvas.style.pointerEvents = "auto";
+          });
+        }
+        isLeftDragging.current = false;
+      } else if (e.button === 1) {
+        isMiddleDragging.current = false;
+      }
     };
 
     canvas.addEventListener("wheel", onWheel, { passive: false });
-    canvas.addEventListener("mousedown", onMouseDown);
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
+    canvas.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
 
     return () => {
       canvas.removeEventListener("wheel", onWheel);
-      canvas.removeEventListener("mousedown", onMouseDown);
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
     };
   }, [gl]);
 
   useFrame(() => {
-    if (!isOrbiting.current) {
-      const xLimit = 8;
-      const yLimitMin = -2;
-      const yLimitMax = 6;
+    const targetX = panOffset.current.x;
+    const targetY = 1.5 + panOffset.current.y;
+    const targetZ = baseZ.current + panOffset.current.z;
 
-      if (Math.abs(target.current.x) > xLimit) {
-        const overshoot = target.current.x - Math.sign(target.current.x) * xLimit;
-        target.current.x -= overshoot * 0.06;
-      }
-      if (target.current.y < yLimitMin) {
-        const overshoot = target.current.y - yLimitMin;
-        target.current.y -= overshoot * 0.06;
-      }
-      if (target.current.y > yLimitMax) {
-        const overshoot = target.current.y - yLimitMax;
-        target.current.y -= overshoot * 0.06;
-      }
-    }
+    current.current.x += (targetX - current.current.x) * LERP_POS;
+    current.current.y += (targetY - current.current.y) * LERP_POS;
+    current.current.z += (targetZ - current.current.z) * LERP_Z;
 
-    current.current.x += (target.current.x - current.current.x) * 0.08;
-    current.current.y += (target.current.y - current.current.y) * 0.08;
-    current.current.z += (target.current.z - current.current.z) * 0.06;
-
-    // Smooth FOV zoom
     const cam = camera as any;
     cam.fov += (fovTarget.current - cam.fov) * 0.1;
     cam.updateProjectionMatrix();
 
-    camera.position.set(current.current.x, current.current.y, current.current.z);
-    const lookZ = current.current.z - 6;
-    camera.lookAt(current.current.x, 0, lookZ);
+    camera.position.set(
+      current.current.x,
+      current.current.y,
+      current.current.z,
+    );
+
+    camera.lookAt(
+      current.current.x,
+      0,
+      current.current.z - CAMERA_Z_OFFSET,
+    );
   });
 
   return null;

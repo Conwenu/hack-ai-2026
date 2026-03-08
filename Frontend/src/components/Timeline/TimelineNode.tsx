@@ -8,6 +8,7 @@ interface TimelineNodeProps {
   step: TimelineStep;
   position: [number, number, number];
   isActive: boolean;
+  modalOpen: boolean;
   onClick: () => void;
 }
 
@@ -15,6 +16,7 @@ export default function TimelineNode({
   step,
   position,
   isActive,
+  modalOpen,
   onClick,
 }: TimelineNodeProps) {
   const meshRef = useRef<Mesh>(null);
@@ -29,6 +31,10 @@ export default function TimelineNode({
       0.08
     );
   });
+
+  // Hide all labels when the modal is open
+  const showHoverLabel = hovered && !isActive && !modalOpen;
+  const showActiveLabel = isActive && !modalOpen;
 
   return (
     <group position={position}>
@@ -60,7 +66,7 @@ export default function TimelineNode({
       </mesh>
 
       {/* Hover label only — no click detail here */}
-      {hovered && !isActive && (
+      {showHoverLabel && (
         <Html
           position={[0.6, 0.4, 0]}
           center={false}
@@ -94,7 +100,7 @@ export default function TimelineNode({
       )}
 
       {/* Active indicator label */}
-      {isActive && (
+      {showActiveLabel && (
         <Html
           position={[0.6, 0.4, 0]}
           center={false}

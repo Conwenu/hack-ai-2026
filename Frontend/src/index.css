@@ -68,6 +68,15 @@ body {
   100% { transform: scale(2.5); opacity: 0; }
 }
 
+@keyframes timeline-enter {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.timeline-enter {
+  animation: timeline-enter 1.4s ease-out both;
+}
+
 @keyframes subtle-pulse {
   0%, 100% { opacity: 0.15; }
   50%      { opacity: 0.3; }

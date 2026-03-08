@@ -57,12 +57,45 @@ export default function TimelineHUD() {
           backdropFilter: "blur(8px)",
         }}
       >
-        <p
-          className="font-title"
-          style={{ fontSize: "1.3rem", color: "rgba(255,255,255,0.9)", letterSpacing: "0.05em", margin: 0 }}
-        >
-          RIPPLE
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <p
+            className="font-title"
+            style={{ fontSize: "1.3rem", color: "rgba(255,255,255,0.9)", letterSpacing: "0.05em", margin: 0 }}
+          >
+            RIPPLE
+          </p>
+
+          {/* ── Refocus button ── */}
+          <button
+            onClick={() => window.dispatchEvent(new Event("timeline-refocus"))}
+            style={{
+              pointerEvents: "auto",
+              padding: "5px 12px",
+              borderRadius: "9999px",
+              fontSize: "11px",
+              fontWeight: 500,
+              color: "rgba(255,255,255,0.5)",
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              cursor: "pointer",
+              transition: "all 0.2s",
+              letterSpacing: "0.03em",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+              e.currentTarget.style.background = "rgba(255,255,255,0.12)";
+              e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "rgba(255,255,255,0.5)";
+              e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+              e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
+            }}
+          >
+            ⟐ Refocus
+          </button>
+        </div>
+
         <div style={{ textAlign: "right" }}>
           <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.28)", letterSpacing: "0.1em", margin: 0 }}>
             STEP
