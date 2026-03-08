@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAppStore } from "../../../stores/useAppStore";
+import { generateBranch } from "../../../services/api";
 import { v4 } from "../../../utils/uid";
 import type { Branch } from "../../../types";
 
@@ -7,88 +8,75 @@ interface BranchPromptProps {
   stepId: string;
   stepIndex: number;
   hasBranch: boolean;
+  nodeTitle: string;
+  nodeSubtitle: string;
+  nodeText: string;
 }
 
-function generateMockSubGoals(prompt: string) {
-  const words = prompt.trim().split(/\s+/);
-  const seed = words.length;
-
-  const templates = [
-    [
-      { title: "Research & gather context", desc: "Investigate existing approaches and gather the information needed." },
-      { title: "Draft initial plan", desc: "Create a first-pass outline based on your research." },
-      { title: "Validate & iterate", desc: "Test assumptions, get feedback, and refine the plan." },
-    ],
-    [
-      { title: "Scope the problem", desc: "Define clear boundaries for what this sub-goal covers." },
-      { title: "Build a prototype", desc: "Create a minimal version to test the core idea." },
-      { title: "Evaluate results", desc: "Measure outcomes against your original criteria." },
-      { title: "Document learnings", desc: "Capture what worked and what didn't for future reference." },
-    ],
-    [
-      { title: "Break down requirements", desc: "List every concrete deliverable and dependency." },
-      { title: "Execute core work", desc: "Focus on the highest-impact tasks first." },
-      { title: "Review & polish", desc: "Quality-check everything before moving on." },
-    ],
-  ];
-
-  const chosen = templates[seed % templates.length];
-
-  return chosen.map((t, i) => ({
-    id: v4(),
-    index: i,
-    title: t.title,
-    description: t.desc,
-    duration: `${i + 1} day${i > 0 ? "s" : ""}`,
-    status: "pending" as const,
-  }));
-}
-
-export default function BranchPrompt({ stepId, stepIndex, hasBranch }: BranchPromptProps) {
+export default function BranchPrompt({ stepId, stepIndex, hasBranch, nodeTitle, nodeSubtitle, nodeText }: BranchPromptProps) {
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const addBranch = useAppStore((s) => s.addBranch);
 
   if (hasBranch) {
-    if (hasBranch) {
-      return (
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-          <div style={{
-            width: "6px", height: "6px", borderRadius: "50%",
-            background: "rgba(167,139,250,0.6)",
-          }} />
-          <span style={{
-            fontSize: "10px", color: "rgba(167,139,250,0.5)",
-            letterSpacing: "0.08em", textTransform: "uppercase",
-          }}>
-            Branched
-          </span>
-        </div>
-      );
-    }
-    return null;
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+        <div style={{
+          width: "6px", height: "6px", borderRadius: "50%",
+          background: "rgba(167,139,250,0.6)",
+        }} />
+        <span style={{
+          fontSize: "10px", color: "rgba(167,139,250,0.5)",
+          letterSpacing: "0.08em", textTransform: "uppercase",
+        }}>
+          Branched
+        </span>
+      </div>
+    );
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!prompt.trim()) return;
     setCreating(true);
+    setError(null);
 
-    setTimeout(() => {
-      const subGoals = generateMockSubGoals(prompt);
+    const result = await generateBranch(
+      prompt.trim(),
+      nodeTitle,
+      nodeSubtitle,
+      nodeText,
+    );
 
-      const branch: Branch = {
-        id: v4(),
-        parentStepId: stepId,
-        label: prompt.trim(),
-        steps: subGoals,
-      };
-
-      addBranch(branch);
-      setPrompt("");
-      setOpen(false);
+    if (!result.success || !result.data) {
+      setError(result.error || "Failed to generate branch. Is the backend running?");
       setCreating(false);
-    }, 600);
+      return;
+    }
+
+    const branchSteps = result.data.steps.map((s, i) => ({
+      id: s.id,
+      index: i,
+      title: s.title,
+      description: s.subtitle,
+      subtitle: s.subtitle,
+      fullText: s.text,
+      duration: undefined,
+      status: "pending" as const,
+    }));
+
+    const branch: Branch = {
+      id: v4(),
+      parentStepId: stepId,
+      label: prompt.trim(),
+      steps: branchSteps,
+    };
+
+    addBranch(branch);
+    setPrompt("");
+    setOpen(false);
+    setCreating(false);
   };
 
   return (
@@ -150,7 +138,7 @@ export default function BranchPrompt({ stepId, stepIndex, hasBranch }: BranchPro
               Branch Goal
             </p>
             <button
-              onClick={() => { setOpen(false); setPrompt(""); }}
+              onClick={() => { setOpen(false); setPrompt(""); setError(null); }}
               style={{
                 background: "transparent", border: "none",
                 color: "rgba(255,255,255,0.25)", fontSize: "14px",
@@ -205,6 +193,16 @@ export default function BranchPrompt({ stepId, stepIndex, hasBranch }: BranchPro
           >
             {creating ? "Creating branch…" : "Create Branch"}
           </button>
+          {error && (
+            <p style={{
+              fontSize: "11px",
+              color: "#ff6b6b",
+              margin: "4px 0 0 0",
+              lineHeight: "1.4",
+            }}>
+              {error}
+            </p>
+          )}
         </div>
       )}
     </div>

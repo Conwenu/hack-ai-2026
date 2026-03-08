@@ -13,9 +13,11 @@ interface NodeModalProps {
 
 export default function NodeModal({ step, onClose }: NodeModalProps) {
   const currentGoal = useAppStore((s) => s.currentGoal);
+  const nav = useAppStore((s) => s.nav);
   const [ttsState, setTtsState] = useState<"idle" | "loading" | "playing">(
     "idle",
   );
+  const [narrationText, setNarrationText] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   if (!step) return null;
@@ -29,7 +31,6 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
   const hasBranch = branches.some((b) => b.parentStepId === step.id);
 
   const handlePlayTTS = async () => {
-    // If already playing, stop it
     if (ttsState === "playing" && audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -39,32 +40,68 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
 
     setTtsState("loading");
 
-    // Build the text to speak: title + subtitle + full description
-    const speakText = `${step.title}. ${subtitle}. ${fullText}`;
+    const current = {
+      id: step.id,
+      index: step.index,
+      title: step.title,
+      subtitle: subtitle,
+      fullText: fullText,
+    };
 
-    const result = await fetchTTS(speakText);
+    // Find previous step for narration context
+    const prevStepIndex = nav.location.stepIndex - 1;
+    let previous = null;
+    if (prevStepIndex >= 0) {
+      const stepsArray =
+        nav.location.branchId === "main"
+          ? steps
+          : currentGoal?.branches.find((b) => b.id === nav.location.branchId)
+              ?.steps ?? [];
+      const prevStep = stepsArray[prevStepIndex];
+      if (prevStep) {
+        previous = {
+          id: prevStep.id,
+          index: prevStep.index,
+          title: prevStep.title,
+          subtitle: prevStep.subtitle || prevStep.description,
+          fullText: prevStep.fullText || prevStep.description,
+        };
+      }
+    }
 
-    if (!result.success || !result.audio) {
+    const result = await fetchTTS(current, previous);
+
+    if (!result.success) {
       setTtsState("idle");
       return;
     }
 
-    const url = URL.createObjectURL(result.audio);
-    const audio = new Audio(url);
-    audioRef.current = audio;
+    if (result.text) {
+      setNarrationText(result.text);
+    }
 
-    audio.onended = () => {
+    // Play audio if available (ElevenLabs key present on backend)
+    if (result.audio) {
+      const url = URL.createObjectURL(result.audio);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        setTtsState("idle");
+        URL.revokeObjectURL(url);
+      };
+
+      audio.onerror = () => {
+        setTtsState("idle");
+        URL.revokeObjectURL(url);
+      };
+
+      audio.play();
+      setTtsState("playing");
+    } else {
+      // No audio (no ElevenLabs key), but narration text was still generated
       setTtsState("idle");
-      URL.revokeObjectURL(url);
-    };
-
-    audio.onerror = () => {
-      setTtsState("idle");
-      URL.revokeObjectURL(url);
-    };
-
-    audio.play();
-    setTtsState("playing");
+    }
   };
 
   return (
@@ -85,7 +122,7 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
           position: "fixed",
           top: "50%",
           left: "50%",
-          transform: "translate(-50%, -50%)",
+          transform: "translate(-50%, -54%)",
           width: "520px",
           maxWidth: "90vw",
           maxHeight: "80vh",
@@ -144,7 +181,6 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
             }}
           >
             {ttsState === "loading" ? (
-              /* Spinner */
               <svg
                 width="12"
                 height="12"
@@ -164,7 +200,6 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
                 />
               </svg>
             ) : ttsState === "playing" ? (
-              /* Stop icon */
               <svg
                 width="10"
                 height="10"
@@ -174,7 +209,6 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
                 <rect x="1" y="1" width="8" height="8" rx="1" />
               </svg>
             ) : (
-              /* Play icon */
               <svg
                 width="11"
                 height="11"
@@ -206,6 +240,9 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
           stepId={step.id}
           stepIndex={stepIdx}
           hasBranch={hasBranch}
+          nodeTitle={step.title}
+          nodeSubtitle={subtitle}
+          nodeText={fullText}
         />
 
         <StepBadge index={step.index} />
@@ -243,6 +280,42 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
             marginBottom: "20px",
           }}
         />
+
+        {/* Narration text (shown after TTS call) */}
+        {narrationText && (
+          <div
+            style={{
+              marginBottom: "20px",
+              padding: "14px 16px",
+              background: "rgba(103,232,249,0.04)",
+              border: "1px solid rgba(103,232,249,0.1)",
+              borderRadius: "12px",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "10px",
+                color: "rgba(103,232,249,0.5)",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                margin: "0 0 8px 0",
+                fontWeight: 600,
+              }}
+            >
+              Narration
+            </p>
+            <p
+              style={{
+                fontSize: "13px",
+                color: "rgba(255,255,255,0.6)",
+                lineHeight: "1.7",
+                margin: 0,
+              }}
+            >
+              {narrationText}
+            </p>
+          </div>
+        )}
 
         <ActionChecklist text={fullText} />
 
