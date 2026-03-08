@@ -7,10 +7,33 @@ interface NarrationButtonProps {
   step: TimelineStep;
   subtitle: string;
   fullText: string;
-  onNarrationText: (text: string) => void;
 }
 
-export default function NarrationButton({ step, subtitle, fullText, onNarrationText }: NarrationButtonProps) {
+function Waveform() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "2px", height: "12px" }}>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <div
+          key={i}
+          style={{
+            width: "2px",
+            borderRadius: "1px",
+            background: "#67e8f9",
+            animation: `waveform 0.8s ease-in-out ${i * 0.12}s infinite alternate`,
+          }}
+        />
+      ))}
+      <style>{`
+        @keyframes waveform {
+          0% { height: 3px; opacity: 0.4; }
+          100% { height: 12px; opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export default function NarrationButton({ step, subtitle, fullText }: NarrationButtonProps) {
   const currentGoal = useAppStore((s) => s.currentGoal);
   const nav = useAppStore((s) => s.nav);
   const [ttsState, setTtsState] = useState<"idle" | "loading" | "playing">("idle");
@@ -62,8 +85,6 @@ export default function NarrationButton({ step, subtitle, fullText, onNarrationT
       return;
     }
 
-    if (result.text) onNarrationText(result.text);
-
     if (result.audio) {
       const url = URL.createObjectURL(result.audio);
       const audio = new Audio(url);
@@ -112,9 +133,7 @@ export default function NarrationButton({ step, subtitle, fullText, onNarrationT
           <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2" strokeDasharray="28" strokeDashoffset="8" strokeLinecap="round" />
         </svg>
       ) : ttsState === "playing" ? (
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-          <rect x="1" y="1" width="8" height="8" rx="1" />
-        </svg>
+        <Waveform />
       ) : (
         <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor">
           <path d="M3 1.5v9l7.5-4.5L3 1.5z" />
