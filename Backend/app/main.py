@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from .endpoints import test, steps, narration
+from .endpoints import test, tasks, steps, narration
 
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -10,6 +10,7 @@ async def root():
     return {"message": "Ripple"}
 
 app.include_router(test.router)
+app.include_router(tasks.router)
 app.include_router(steps.router)
 app.include_router(narration.router)
 
