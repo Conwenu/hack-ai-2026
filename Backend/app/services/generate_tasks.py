@@ -2,7 +2,7 @@ import json
 import uuid
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from langchain_ollama import ChatOllama
+from .llm_service import llm
 
 llm = ChatOllama(
     model="llama3.1:8b", 

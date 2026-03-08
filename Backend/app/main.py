@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from .endpoints import test, tasks, steps, narration
+from .endpoints import test, tasks, steps, narration, branch
 
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -22,6 +22,7 @@ app.include_router(test.router)
 app.include_router(tasks.router)
 app.include_router(steps.router)
 app.include_router(narration.router)
+app.include_router(branch.router)
 
 templates = Jinja2Templates(directory="templates")
 
