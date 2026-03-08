@@ -20,24 +20,46 @@ export default function TimelineNode({
   onClick,
 }: TimelineNodeProps) {
   const meshRef = useRef<Mesh>(null);
+  const ringRef = useRef<Mesh>(null);
+  const innerRef = useRef<Mesh>(null);
   const [hovered, setHovered] = useState(false);
 
   useFrame((_, delta) => {
     if (!meshRef.current) return;
-    meshRef.current.rotation.y += delta * 0.3;
-    const target = isActive ? 1.3 : hovered ? 1.1 : 1;
-    meshRef.current.scale.lerp(
-      { x: target, y: target, z: target } as any,
-      0.08
-    );
+
+    meshRef.current.rotation.y += delta * (isActive ? 0.8 : 0.3);
+    meshRef.current.rotation.x += delta * (isActive ? 0.3 : 0.1);
+
+    const target = isActive ? 1.35 : hovered ? 1.15 : 1;
+    meshRef.current.scale.lerp({ x: target, y: target, z: target } as any, 0.1);
+
+    if (ringRef.current) {
+      ringRef.current.rotation.z += delta * (isActive ? -1.2 : -0.5);
+      ringRef.current.rotation.x =
+        Math.PI / 2 + Math.sin(Date.now() * 0.001) * 0.3;
+      const ringTarget = isActive ? 1.5 : hovered ? 1.2 : 0.85;
+      ringRef.current.scale.lerp(
+        { x: ringTarget, y: ringTarget, z: ringTarget } as any,
+        0.08,
+      );
+    }
+
+    if (innerRef.current) {
+      const pulse = 0.85 + Math.sin(Date.now() * 0.003) * 0.15;
+      innerRef.current.scale.setScalar(pulse);
+    }
   });
 
-  // Hide all labels when the modal is open
   const showHoverLabel = hovered && !isActive && !modalOpen;
   const showActiveLabel = isActive && !modalOpen;
 
+  const nodeColor = isActive ? "#ffffff" : hovered ? "#67e8f9" : "#0891b2";
+  const emissiveColor = isActive ? "#ffffff" : hovered ? "#22d3ee" : "#0e7490";
+  const emissiveIntensity = isActive ? 0.6 : hovered ? 0.9 : 0.4;
+
   return (
     <group position={position}>
+      {/* Outer wireframe octahedron */}
       <mesh
         ref={meshRef}
         onClick={(e) => {
@@ -54,21 +76,61 @@ export default function TimelineNode({
           document.body.style.cursor = "default";
         }}
       >
-        <octahedronGeometry args={[0.35, 0]} />
+        <octahedronGeometry args={[0.32, 0]} />
         <meshStandardMaterial
-          color={isActive ? "#ffffff" : "#aaaaaa"}
-          emissive={isActive ? "#ffffff" : "#555555"}
-          emissiveIntensity={isActive ? 0.4 : 0.1}
-          wireframe={false}
+          color={nodeColor}
+          emissive={emissiveColor}
+          emissiveIntensity={emissiveIntensity}
+          wireframe={true}
           transparent
-          opacity={isActive ? 1 : 0.6}
+          opacity={isActive ? 0.9 : hovered ? 0.7 : 0.4}
         />
       </mesh>
 
-      {/* Hover label only — no click detail here */}
+      {/* Solid inner core */}
+      <mesh ref={innerRef}>
+        <octahedronGeometry args={[0.16, 0]} />
+        <meshStandardMaterial
+          color={nodeColor}
+          emissive={emissiveColor}
+          emissiveIntensity={emissiveIntensity * 1.5}
+          transparent
+          opacity={isActive ? 1 : hovered ? 0.85 : 0.55}
+          roughness={0.1}
+          metalness={0.6}
+        />
+      </mesh>
+
+      {/* Orbiting torus ring */}
+      <mesh ref={ringRef}>
+        <torusGeometry args={[0.38, 0.018, 6, 48]} />
+        <meshStandardMaterial
+          color={nodeColor}
+          emissive={emissiveColor}
+          emissiveIntensity={emissiveIntensity}
+          transparent
+          opacity={isActive ? 0.75 : hovered ? 0.5 : 0.25}
+          roughness={0.2}
+          metalness={0.8}
+        />
+      </mesh>
+
+      {/* Gold glow shell */}
+      <mesh>
+        <octahedronGeometry args={[0.42, 0]} />
+        <meshStandardMaterial
+          color="#f59e0b"
+          emissive="#b45309"
+          emissiveIntensity={isActive ? 1.8 : hovered ? 1.2 : 0.5}
+          wireframe={true}
+          transparent
+          opacity={isActive ? 0.35 : hovered ? 0.25 : 0.15}
+        />
+      </mesh>
+
       {showHoverLabel && (
         <Html
-          position={[0.6, 0.4, 0]}
+          position={[0.7, 0.45, 0]}
           center={false}
           style={{ pointerEvents: "none" }}
         >
@@ -77,8 +139,8 @@ export default function TimelineNode({
               width: "130px",
               padding: "6px 10px",
               borderRadius: "8px",
-              background: "rgba(0,0,0,0.85)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "rgba(0,0,0,0.88)",
+              border: "1px solid rgba(255,255,255,0.12)",
               backdropFilter: "blur(8px)",
             }}
           >
@@ -99,10 +161,9 @@ export default function TimelineNode({
         </Html>
       )}
 
-      {/* Active indicator label */}
       {showActiveLabel && (
         <Html
-          position={[0.6, 0.4, 0]}
+          position={[0.7, 0.45, 0]}
           center={false}
           style={{ pointerEvents: "none" }}
         >
@@ -111,8 +172,8 @@ export default function TimelineNode({
               width: "130px",
               padding: "6px 10px",
               borderRadius: "8px",
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.2)",
+              background: "rgba(255,255,255,0.09)",
+              border: "1px solid rgba(255,255,255,0.22)",
               backdropFilter: "blur(8px)",
             }}
           >

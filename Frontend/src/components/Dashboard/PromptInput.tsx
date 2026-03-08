@@ -53,7 +53,7 @@ export default function PromptInput({
         border: "1px solid rgba(255,255,255,0.15)",
         background: "#1a1a1a",
         padding: compact ? "0.5rem 1rem" : "0.75rem 1.25rem",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+        boxShadow: "0 0 0 1px rgba(255,255,255,0.08), 0 8px 40px rgba(255,255,255,0.07), 0 16px 60px rgba(255,255,255,0.04), 0 2px 12px rgba(0,0,0,0.9)",
         opacity: disabled ? 0.4 : 1,
         pointerEvents: disabled ? "none" : "auto",
         transition: "border-color 0.3s, box-shadow 0.3s",

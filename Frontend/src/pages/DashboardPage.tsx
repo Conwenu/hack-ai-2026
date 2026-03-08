@@ -4,6 +4,7 @@ import { submitGoal } from "../services/api";
 import { v4 } from "../utils/uid";
 import PromptInput from "../components/Dashboard/PromptInput";
 import TimelinePreview from "../components/Timeline/TimelinePreview";
+import CursorRipple from "../components/Dashboard/CursorRipple";
 
 export default function DashboardPage() {
   const { phase, addMessage, setPhase, setCurrentGoal } = useAppStore();
@@ -23,8 +24,6 @@ export default function DashboardPage() {
 
     setLoading(true);
     setError(null);
-
-    // Show a "thinking" phase while Ollama generates
     setPhase("refining");
 
     try {
@@ -50,11 +49,12 @@ export default function DashboardPage() {
 
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
+      {isInitial && <CursorRipple />}
       {!isTransitioning && phase !== "refining" && (
         <TimelinePreview visible={true} />
       )}
 
-      {/* TITLE — animates from center to top-left */}
+      {/* TITLE */}
       <div
         style={{
           position: "absolute",
@@ -85,7 +85,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* INPUT — only on initial prompt screen */}
+      {/* INPUT */}
       {isInitial && (
         <div
           style={{
@@ -124,7 +124,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* GENERATING STATE — while Ollama is thinking */}
+      {/* GENERATING STATE */}
       {phase === "refining" && (
         <div
           style={{
@@ -137,7 +137,7 @@ export default function DashboardPage() {
             zIndex: 20,
           }}
         >
-          <div style={{ position: "relative", width: "128px", height: "128px" }}>
+          <div style={{ position: "relative", width: "160px", height: "160px" }}>
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
@@ -145,58 +145,66 @@ export default function DashboardPage() {
                   position: "absolute",
                   inset: 0,
                   borderRadius: "50%",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  animation: `ripple-expand 2.4s ease-out ${i * 0.4}s infinite`,
+                  border: `${i === 0 ? "2px" : "1.5px"} solid rgba(255,255,255,${0.65 - i * 0.18})`,
+                  boxShadow: `0 0 ${10 + i * 6}px rgba(255,255,255,${0.12 - i * 0.03})`,
+                  animation: `ripple-expand 2.4s ease-out ${i * 0.5}s infinite`,
                 }}
               />
             ))}
             <div
               style={{
                 position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "10px",
+                height: "10px",
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.95)",
+                boxShadow: "0 0 14px rgba(255,255,255,0.6), 0 0 28px rgba(255,255,255,0.2)",
+                animation: "subtle-pulse 1.2s ease-in-out infinite",
               }}
-            >
-              <span
-                style={{
-                  fontSize: "13px",
-                  color: "rgba(255,255,255,0.45)",
-                  letterSpacing: "0.15em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Thinking
-              </span>
-            </div>
+            />
           </div>
+          <span
+            style={{
+              marginTop: "28px",
+              fontSize: "13px",
+              color: "rgba(255,255,255,0.85)",
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              fontWeight: 500,
+            }}
+          >
+            Thinking
+          </span>
           <p
             style={{
-              marginTop: "24px",
-              fontSize: "12px",
-              color: "rgba(255,255,255,0.2)",
+              marginTop: "8px",
+              fontSize: "11px",
+              color: "rgba(255,255,255,0.35)",
               letterSpacing: "0.05em",
             }}
           >
-            Ollama is generating your plan…
+            Generating your plan…
           </p>
         </div>
       )}
 
-      {/* MAPPING ANIMATION — during transition */}
+      {/* MAPPING ANIMATION */}
       {isTransitioning && (
         <div
           style={{
             position: "absolute",
             inset: 0,
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 20,
           }}
         >
-          <div style={{ position: "relative", width: "128px", height: "128px" }}>
+          <div style={{ position: "relative", width: "160px", height: "160px" }}>
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
@@ -204,32 +212,39 @@ export default function DashboardPage() {
                   position: "absolute",
                   inset: 0,
                   borderRadius: "50%",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  animation: `ripple-expand 1.8s ease-out ${i * 0.3}s infinite`,
+                  border: `${i === 0 ? "2px" : "1.5px"} solid rgba(255,255,255,${0.7 - i * 0.2})`,
+                  boxShadow: `0 0 ${10 + i * 6}px rgba(255,255,255,${0.12 - i * 0.03})`,
+                  animation: `ripple-expand 1.8s ease-out ${i * 0.35}s infinite`,
                 }}
               />
             ))}
             <div
               style={{
                 position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "10px",
+                height: "10px",
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.95)",
+                boxShadow: "0 0 14px rgba(255,255,255,0.6), 0 0 28px rgba(255,255,255,0.2)",
+                animation: "subtle-pulse 1s ease-in-out infinite",
               }}
-            >
-              <span
-                style={{
-                  fontSize: "14px",
-                  color: "rgba(255,255,255,0.5)",
-                  letterSpacing: "0.15em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Mapping
-              </span>
-            </div>
+            />
           </div>
+          <span
+            style={{
+              marginTop: "28px",
+              fontSize: "13px",
+              color: "rgba(255,255,255,0.85)",
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              fontWeight: 500,
+            }}
+          >
+            Mapping
+          </span>
         </div>
       )}
     </div>
