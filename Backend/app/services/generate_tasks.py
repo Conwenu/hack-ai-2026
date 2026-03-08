@@ -43,8 +43,24 @@ def generate_tasks(user_input: str, target_id: str, steps: List[StepNode]) -> di
         - id: unique identifier
         - prevStep: list of ids pointing to previous nodes
         - nextStep: list of ids pointing to next nodes
+<<<<<<< ours
+<<<<<<< ours
+        - title: short action-oriented phrase
+        concise, complete sentence - subtitle: a (15-20 words max) that provides context or clarifies the task
+||||||| ancestor
+        - title: short action-oriented phrase (e.g., 'Strengthen Jaw Muscles')
+        concise, complete sentence - subtitle: a (15-20 words max) that provides context or clarifies the task
+=======
         - title: short action-oriented phrase
         - subtitle: a concise, complete sentence (15-20 words max) that provides context or clarifies the task
+>>>>>>> theirs
+||||||| ancestor
+        - title: short action-oriented phrase (e.g., 'Strengthen Jaw Muscles')
+        concise, complete sentence - subtitle: a (15-20 words max) that provides context or clarifies the task
+=======
+        - title: short action-oriented phrase
+        - subtitle: a concise, complete sentence (15-20 words max) that provides context or clarifies the task
+>>>>>>> theirs
         - text: a half to full paragraph describing the task in detail, including why it's important and any key details
     
     The LLM decides how many tasks are needed to complete the step.
