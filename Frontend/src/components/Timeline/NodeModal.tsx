@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import type { TimelineStep } from "../../types";
 
 interface NodeModalProps {
@@ -6,36 +5,11 @@ interface NodeModalProps {
   onClose: () => void;
 }
 
-// For demo purposes we generate mock actionable steps from the description.
-// When backend is ready, these will come from step.actionableItems
-function getMockActions(step: TimelineStep): string[] {
-  return [
-    `Research approaches for: ${step.title}`,
-    `Create a concrete plan with deadlines`,
-    `Identify resources and dependencies`,
-    `Execute first action item`,
-    `Review and adjust based on results`,
-  ];
-}
-
 export default function NodeModal({ step, onClose }: NodeModalProps) {
-  const [checked, setChecked] = useState<boolean[]>([]);
-
-  useEffect(() => {
-    if (step) {
-      setChecked(getMockActions(step).map(() => false));
-    }
-  }, [step?.id]);
-
   if (!step) return null;
 
-  const actions = getMockActions(step);
-  const completedCount = checked.filter(Boolean).length;
-  const progress = actions.length > 0 ? (completedCount / actions.length) * 100 : 0;
-
-  const toggle = (i: number) => {
-    setChecked((prev) => prev.map((v, idx) => (idx === i ? !v : v)));
-  };
+  const subtitle = (step.metadata?.subtitle as string) || step.description;
+  const fullText = (step.metadata?.fullText as string) || step.description;
 
   return (
     <>
@@ -58,12 +32,14 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          width: "480px",
+          width: "520px",
           maxWidth: "90vw",
+          maxHeight: "80vh",
+          overflowY: "auto",
           background: "#111",
           border: "1px solid rgba(255,255,255,0.1)",
           borderRadius: "20px",
-          padding: "28px",
+          padding: "32px",
           zIndex: 51,
           boxShadow: "0 24px 64px rgba(0,0,0,0.8)",
         }}
@@ -86,123 +62,104 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
           ✕
         </button>
 
+        {/* Step number badge */}
+        <div
+          style={{
+            display: "inline-block",
+            padding: "3px 10px",
+            borderRadius: "9999px",
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            marginBottom: "14px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "10px",
+              color: "rgba(255,255,255,0.35)",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+            }}
+          >
+            Step {step.index + 1}
+          </span>
+        </div>
+
         {/* Title */}
         <h2
           style={{
-            fontSize: "1.1rem",
+            fontSize: "1.2rem",
             fontWeight: 700,
             color: "rgba(255,255,255,0.95)",
-            margin: "0 0 8px 0",
+            margin: "0 0 10px 0",
             paddingRight: "24px",
+            lineHeight: "1.4",
           }}
         >
           {step.title}
         </h2>
 
-        {/* Description */}
+        {/* Subtitle — the concise sentence from Ollama */}
         <p
           style={{
-            fontSize: "13px",
-            color: "rgba(255,255,255,0.4)",
+            fontSize: "14px",
+            color: "rgba(255,255,255,0.55)",
             lineHeight: "1.6",
             margin: "0 0 20px 0",
+            fontStyle: "italic",
           }}
         >
-          {step.description}
+          {subtitle}
         </p>
 
+        {/* Divider */}
+        <div
+          style={{
+            width: "100%",
+            height: "1px",
+            background: "rgba(255,255,255,0.06)",
+            marginBottom: "20px",
+          }}
+        />
+
+        {/* Full text — the detailed description from Ollama */}
+        <div>
+          <p
+            style={{
+              fontSize: "10px",
+              color: "rgba(255,255,255,0.25)",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              margin: "0 0 10px 0",
+            }}
+          >
+            Details
+          </p>
+          <p
+            style={{
+              fontSize: "13px",
+              color: "rgba(255,255,255,0.7)",
+              lineHeight: "1.8",
+              margin: 0,
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {fullText}
+          </p>
+        </div>
+
         {step.duration && (
-          <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.2)", margin: "0 0 20px 0" }}>
+          <p
+            style={{
+              fontSize: "11px",
+              color: "rgba(255,255,255,0.2)",
+              marginTop: "20px",
+              marginBottom: 0,
+            }}
+          >
             Estimated time: {step.duration}
           </p>
         )}
-
-        {/* Progress bar */}
-        <div style={{ marginBottom: "16px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-            <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)", margin: 0 }}>
-              Progress
-            </p>
-            <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)", margin: 0 }}>
-              {completedCount} / {actions.length}
-            </p>
-          </div>
-          <div
-            style={{
-              width: "100%",
-              height: "4px",
-              background: "rgba(255,255,255,0.08)",
-              borderRadius: "9999px",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                width: `${progress}%`,
-                height: "100%",
-                background: "white",
-                borderRadius: "9999px",
-                transition: "width 0.3s ease",
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Actionable steps */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {actions.map((action, i) => (
-            <div
-              key={i}
-              onClick={() => toggle(i)}
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "12px",
-                cursor: "pointer",
-                padding: "8px 10px",
-                borderRadius: "10px",
-                background: checked[i] ? "rgba(255,255,255,0.04)" : "transparent",
-                transition: "background 0.2s",
-              }}
-            >
-              {/* Checkbox */}
-              <div
-                style={{
-                  flexShrink: 0,
-                  width: "16px",
-                  height: "16px",
-                  borderRadius: "4px",
-                  border: checked[i] ? "none" : "1px solid rgba(255,255,255,0.2)",
-                  background: checked[i] ? "white" : "transparent",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginTop: "1px",
-                  transition: "all 0.2s",
-                }}
-              >
-                {checked[i] && (
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path d="M2 5l2.5 2.5L8 3" stroke="black" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </div>
-
-              <p
-                style={{
-                  fontSize: "13px",
-                  color: checked[i] ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.75)",
-                  margin: 0,
-                  lineHeight: "1.5",
-                  textDecoration: checked[i] ? "line-through" : "none",
-                  transition: "all 0.2s",
-                }}
-              >
-                {action}
-              </p>
-            </div>
-          ))}
-        </div>
       </div>
     </>
   );

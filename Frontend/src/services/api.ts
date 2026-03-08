@@ -1,90 +1,76 @@
 // ============================================================
 // Ripple – API Service Layer
 // ------------------------------------------------------------
-// All backend communication funnels through here.
-// Swap the base URL and implementations once the backend is live.
+// Connects to the FastAPI backend which uses Ollama to generate
+// step-by-step plans. No mock data — real LLM output.
 // ============================================================
 
-import type { Goal, ChatMessage, ApiResponse } from "../types";
+import type { Goal, ApiResponse } from "../types";
+import { v4 } from "../utils/uid";
 
 // ----- Configuration --------------------------------------------------------
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5173";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-async function request<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<ApiResponse<T>> {
-  try {
-    const res = await fetch(`${API_BASE}${endpoint}`, {
-      headers: { "Content-Type": "application/json", ...options.headers },
-      ...options,
-    });
-    const json = await res.json();
-    if (!res.ok) return { success: false, error: json.detail || res.statusText };
-    return { success: true, data: json as T };
-  } catch (err) {
-    return { success: false, error: (err as Error).message };
-  }
-}
+// ----- Goal endpoint --------------------------------------------------------
 
-// ----- Goal endpoints -------------------------------------------------------
-
-/** Submit an initial prompt and receive a refined goal + timeline. */
+/**
+ * Submit a goal prompt to the backend.
+ * The backend calls Ollama (llama3.1:8b) and returns structured steps.
+ * We map the backend response into the frontend Goal type.
+ */
 export async function submitGoal(prompt: string): Promise<ApiResponse<Goal>> {
-  return request<Goal>("/api/goals", {
-    method: "POST",
-    body: JSON.stringify({ prompt }),
-  });
-}
-
-/** Continue the refinement conversation with an additional message. */
-export async function refineGoal(
-  goalId: string,
-  message: string
-): Promise<ApiResponse<{ goal: Goal; messages: ChatMessage[] }>> {
-  return request("/api/goals/" + goalId + "/refine", {
-    method: "POST",
-    body: JSON.stringify({ message }),
-  });
-}
-
-/** Fetch an existing goal by ID (for future history features). */
-export async function getGoal(goalId: string): Promise<ApiResponse<Goal>> {
-  return request<Goal>("/api/goals/" + goalId);
-}
-
-// ----- Voice endpoints (ElevenLabs) -----------------------------------------
-
-/** Send text and get back an audio blob URL for playback. */
-export async function textToSpeech(text: string): Promise<string | null> {
   try {
-    const res = await fetch(`${API_BASE}/api/voice/tts`, {
+    const res = await fetch(`${API_BASE}/generate-steps`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ goal: prompt }),
     });
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return URL.createObjectURL(blob);
-  } catch {
-    return null;
-  }
-}
 
-/** Upload an audio blob for speech-to-text transcription. */
-export async function speechToText(audioBlob: Blob): Promise<string | null> {
-  try {
-    const form = new FormData();
-    form.append("audio", audioBlob);
-    const res = await fetch(`${API_BASE}/api/voice/stt`, {
-      method: "POST",
-      body: form,
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json.transcript ?? null;
-  } catch {
-    return null;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      return { success: false, error: err.detail || res.statusText };
+    }
+
+    const data = await res.json();
+
+    // Backend returns: { steps: [{ id, prevStep, nextStep, title, subtitle, text }, ...] }
+    // Map to frontend Goal shape
+    const goal: Goal = {
+      id: v4(),
+      raw_prompt: prompt,
+      refined_prompt: prompt,
+      title: prompt.length > 60 ? prompt.slice(0, 57) + "..." : prompt,
+      summary: "AI-generated plan powered by Ollama.",
+      steps: data.steps.map(
+        (
+          s: {
+            id: string;
+            title: string;
+            subtitle: string;
+            text: string;
+          },
+          i: number
+        ) => ({
+          id: s.id,
+          index: i,
+          title: s.title,
+          description: s.subtitle,
+          duration: undefined,
+          status: "pending" as const,
+          metadata: {
+            subtitle: s.subtitle,
+            fullText: s.text,
+          },
+        })
+      ),
+      branches: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    return { success: true, data: goal };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
   }
 }
