@@ -1,6 +1,7 @@
 import os
 from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-
+from dotenv import load_dotenv
+load_dotenv()
 LLM_BACKEND = os.getenv("LLM_BACKEND", "gemini")  # "gemini" (default) or "ollama"
 
 if LLM_BACKEND == "ollama":
