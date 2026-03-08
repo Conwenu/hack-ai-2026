@@ -113,7 +113,7 @@ Return the tasks as a JSON object with a "tasks" array, each containing "title",
     task_plan = task_planner_llm.invoke(prompt)
 
     nodes = []
-    prev_id = None
+    prev_id = target_id
     for task in task_plan.tasks:
         node_id = new_id()
         node = TaskNode(
