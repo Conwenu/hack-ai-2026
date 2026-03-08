@@ -1,24 +1,9 @@
 import json
-import os
 import uuid
 from typing import List
 from pydantic import BaseModel, Field
 
-# Use environment variable to switch between backends
-LLM_BACKEND = os.getenv("LLM_BACKEND", "ollama")  # "ollama" or "gemini"
-
-if LLM_BACKEND == "ollama":
-    from langchain_ollama import ChatOllama
-    llm = ChatOllama(
-        model="llama3.1:8b",
-        temperature=0
-    )
-else:
-    from langchain_google_genai import ChatGoogleGenerativeAI
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        temperature=0
-    )
+from app.services.llm_service import llm
 
 class StepNode(BaseModel):
     id: str
