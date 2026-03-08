@@ -81,9 +81,9 @@ def generate_tasks(user_input: str, target_id: str, steps: List[StepNode]) -> di
     context = "\n".join(context_parts)
 
     prompt = f"""
-Break down the current step into more atomic, actionable tasks, keeping the user's original goal in mind.
+Break down the current step into more atomic, actionable tasks, keeping the user's prompt in mind.
 
-User's Original Goal:
+User's prompt:
 {user_input}
 
 {context}
@@ -95,6 +95,8 @@ Rules:
     * Actionable: The user can clearly perform the task.
     * Measurable: Include specific numbers, quantities, durations, frequencies, or checkpoints.
     * Specific: The user knows exactly what to do without guessing.
+- If the user's prompt introduces a limitation, disability, or constraint that conflicts with the step, modify the tasks so they remain achievable for the user while still accomplishing the goal of the step.
+- Primary context: The user’s prompt always overrides instructions in the step if a conflict exists.
 - **Avoid vague advice:** Do not use words like "try", "consider", "focus on", "be mindful of", or "aim to". Use direct, concrete language.
 - **Do NOT include general tips or motivational filler.** Every sentence should contribute directly to the task's execution.
 - **Do NOT conclude with a review or reflection task unless explicitly included in the step.**
@@ -113,7 +115,7 @@ Return the tasks as a JSON object with a "tasks" array, each containing "title",
     task_plan = task_planner_llm.invoke(prompt)
 
     nodes = []
-    prev_id = target_id
+    prev_id = None
     for task in task_plan.tasks:
         node_id = new_id()
         node = TaskNode(
