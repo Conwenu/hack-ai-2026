@@ -19,6 +19,21 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
  * The backend calls Ollama (llama3.1:8b) and returns structured steps.
  * We map the backend response into the frontend Goal type.
  */
+export async function fetchTTS(text: string) {
+  const response = await fetch("/api/tts", {
+    method: "POST",
+    body: JSON.stringify({ text }),
+    headers: { "Content-Type": "application/json" }
+  });
+
+  const blob = await response.blob();
+
+  return {
+    success: response.ok,
+    audio: blob
+  };
+}
+
 export async function submitGoal(prompt: string): Promise<ApiResponse<Goal>> {
   try {
     const res = await fetch(`${API_BASE}/generate-steps`, {
