@@ -1,5 +1,6 @@
 import os  
-import base64  
+import base64
+import random
 from dotenv import load_dotenv  
   
 load_dotenv()  
@@ -20,15 +21,19 @@ def humanize(text: str):
     text = text.replace("—", "\n— ")
     return text
 
+voice_ids = ["PawMsb9h2MWDsRgzCXzT", "Q0Et7LOU7VpeoeCRQAVS"]
+
   
-def text_to_speech_base64(text: str, voice_id: str = "JBFqnCBsd6RMkjVDRZzb") -> str | None:
+def text_to_speech_base64(text: str) -> str | None:
     """Generate speech and return base64-encoded MP3, or None if TTS is unavailable."""
 
     if _client is None:
         return None
 
     from elevenlabs import VoiceSettings
-
+    
+    voice_id = random.choice(voice_ids)
+    
     audio_generator = _client.text_to_speech.convert(
         text=humanize(text),
         voice_id=voice_id,
