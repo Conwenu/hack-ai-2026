@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from .endpoints import test, steps, tasks
 app = FastAPI(title="Ripple")
+from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
