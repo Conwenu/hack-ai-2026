@@ -18,37 +18,41 @@ export async function fetchTTS(
   current: { id: string; index: number; title: string; subtitle: string; fullText: string },
   previous?: { id: string; index: number; title: string; subtitle: string; fullText: string } | null,
 ) {
-  const body: Record<string, unknown> = { current };
-  if (previous) body.previous = previous;
+  try {
+    const body: Record<string, unknown> = { current };
+    if (previous) body.previous = previous;
 
-  const response = await fetch(`${API_BASE}/narration/`, {
-    method: "POST",
-    body: JSON.stringify(body),
-    headers: { "Content-Type": "application/json" },
-  });
+    const response = await fetch(`${API_BASE}/narration/`, {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    });
 
-  if (!response.ok) {
+    if (!response.ok) {
+      return { success: false, text: null, audio: null };
+    }
+
+    const data = await response.json();
+
+    let audioBlob: Blob | null = null;
+    if (data.audio_base64) {
+      const binaryString = atob(data.audio_base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      audioBlob = new Blob([bytes], { type: "audio/mpeg" });
+    }
+
+    return {
+      success: true,
+      text: data.text as string,
+      audio: audioBlob,
+    };
+  } catch (err) {
+    console.error("fetchTTS error:", err);
     return { success: false, text: null, audio: null };
   }
-
-  const data = await response.json();
-
-  // data = { text: "...", audio_base64: "..." | null }
-  let audioBlob: Blob | null = null;
-  if (data.audio_base64) {
-    const binaryString = atob(data.audio_base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    audioBlob = new Blob([bytes], { type: "audio/mpeg" });
-  }
-
-  return {
-    success: true,
-    text: data.text as string,
-    audio: audioBlob,
-  };
 }
 
 // ----- Branch generation ----------------------------------------------------

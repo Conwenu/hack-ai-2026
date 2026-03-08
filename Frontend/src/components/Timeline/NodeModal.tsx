@@ -1,10 +1,12 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import type { TimelineStep } from "../../types";
 import { useAppStore } from "../../stores/useAppStore";
-import { fetchTTS } from "../../services/api";
 import StepBadge from "./modal/StepBadge";
 import ActionChecklist from "./modal/ActionChecklist";
 import BranchPrompt from "./modal/BranchPrompt";
+import BranchIcon from "./modal/BranchIcon";
+import NarrationButton from "./modal/NarrationButton";
+import NarrationPanel from "./modal/NarrationPanel";
 
 interface NodeModalProps {
   step: TimelineStep | null;
@@ -13,12 +15,8 @@ interface NodeModalProps {
 
 export default function NodeModal({ step, onClose }: NodeModalProps) {
   const currentGoal = useAppStore((s) => s.currentGoal);
-  const nav = useAppStore((s) => s.nav);
-  const [ttsState, setTtsState] = useState<"idle" | "loading" | "playing">(
-    "idle",
-  );
   const [narrationText, setNarrationText] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [branchOpen, setBranchOpen] = useState(false);
 
   if (!step) return null;
 
@@ -29,80 +27,6 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
   const branches = currentGoal?.branches ?? [];
   const stepIdx = steps.findIndex((s) => s.id === step.id);
   const hasBranch = branches.some((b) => b.parentStepId === step.id);
-
-  const handlePlayTTS = async () => {
-    if (ttsState === "playing" && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setTtsState("idle");
-      return;
-    }
-
-    setTtsState("loading");
-
-    const current = {
-      id: step.id,
-      index: step.index,
-      title: step.title,
-      subtitle: subtitle,
-      fullText: fullText,
-    };
-
-    // Find previous step for narration context
-    const prevStepIndex = nav.location.stepIndex - 1;
-    let previous = null;
-    if (prevStepIndex >= 0) {
-      const stepsArray =
-        nav.location.branchId === "main"
-          ? steps
-          : currentGoal?.branches.find((b) => b.id === nav.location.branchId)
-              ?.steps ?? [];
-      const prevStep = stepsArray[prevStepIndex];
-      if (prevStep) {
-        previous = {
-          id: prevStep.id,
-          index: prevStep.index,
-          title: prevStep.title,
-          subtitle: prevStep.subtitle || prevStep.description,
-          fullText: prevStep.fullText || prevStep.description,
-        };
-      }
-    }
-
-    const result = await fetchTTS(current, previous);
-
-    if (!result.success) {
-      setTtsState("idle");
-      return;
-    }
-
-    if (result.text) {
-      setNarrationText(result.text);
-    }
-
-    // Play audio if available (ElevenLabs key present on backend)
-    if (result.audio) {
-      const url = URL.createObjectURL(result.audio);
-      const audio = new Audio(url);
-      audioRef.current = audio;
-
-      audio.onended = () => {
-        setTtsState("idle");
-        URL.revokeObjectURL(url);
-      };
-
-      audio.onerror = () => {
-        setTtsState("idle");
-        URL.revokeObjectURL(url);
-      };
-
-      audio.play();
-      setTtsState("playing");
-    } else {
-      // No audio (no ElevenLabs key), but narration text was still generated
-      setTtsState("idle");
-    }
-  };
 
   return (
     <>
@@ -120,9 +44,9 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
       <div
         style={{
           position: "fixed",
-          top: "50%",
+          top: "46%",
           left: "50%",
-          transform: "translate(-50%, -54%)",
+          transform: "translate(-50%, -50%)",
           width: "520px",
           maxWidth: "90vw",
           maxHeight: "80vh",
@@ -135,7 +59,7 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
           boxShadow: "0 24px 64px rgba(0,0,0,0.8)",
         }}
       >
-        {/* Close + Play buttons */}
+        {/* ── Top-right icons ── */}
         <div
           style={{
             position: "absolute",
@@ -143,84 +67,20 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
             right: "16px",
             display: "flex",
             alignItems: "center",
-            gap: "8px",
+            gap: "6px",
           }}
         >
-          {/* TTS Play button */}
-          <button
-            onClick={handlePlayTTS}
-            disabled={ttsState === "loading"}
-            aria-label={
-              ttsState === "playing" ? "Stop voiceover" : "Play voiceover"
-            }
-            style={{
-              width: "28px",
-              height: "28px",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background:
-                ttsState === "playing"
-                  ? "rgba(103,232,249,0.15)"
-                  : ttsState === "loading"
-                    ? "rgba(255,255,255,0.04)"
-                    : "rgba(255,255,255,0.06)",
-              border:
-                ttsState === "playing"
-                  ? "1px solid rgba(103,232,249,0.3)"
-                  : "1px solid rgba(255,255,255,0.1)",
-              color:
-                ttsState === "playing"
-                  ? "#67e8f9"
-                  : ttsState === "loading"
-                    ? "rgba(255,255,255,0.15)"
-                    : "rgba(255,255,255,0.35)",
-              cursor: ttsState === "loading" ? "wait" : "pointer",
-              transition: "all 0.2s",
-            }}
-          >
-            {ttsState === "loading" ? (
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 16 16"
-                fill="none"
-                style={{ animation: "spin 1s linear infinite" }}
-              >
-                <circle
-                  cx="8"
-                  cy="8"
-                  r="6"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeDasharray="28"
-                  strokeDashoffset="8"
-                  strokeLinecap="round"
-                />
-              </svg>
-            ) : ttsState === "playing" ? (
-              <svg
-                width="10"
-                height="10"
-                viewBox="0 0 10 10"
-                fill="currentColor"
-              >
-                <rect x="1" y="1" width="8" height="8" rx="1" />
-              </svg>
-            ) : (
-              <svg
-                width="11"
-                height="11"
-                viewBox="0 0 12 12"
-                fill="currentColor"
-              >
-                <path d="M3 1.5v9l7.5-4.5L3 1.5z" />
-              </svg>
-            )}
-          </button>
-
-          {/* Close button */}
+          <BranchIcon
+            hasBranch={hasBranch}
+            isOpen={branchOpen}
+            onToggle={() => setBranchOpen(!branchOpen)}
+          />
+          <NarrationButton
+            step={step}
+            subtitle={subtitle}
+            fullText={fullText}
+            onNarrationText={setNarrationText}
+          />
           <button
             onClick={onClose}
             style={{
@@ -230,20 +90,27 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
               fontSize: "18px",
               cursor: "pointer",
               lineHeight: 1,
+              padding: 0,
             }}
           >
             ✕
           </button>
         </div>
 
-        <BranchPrompt
-          stepId={step.id}
-          stepIndex={stepIdx}
-          hasBranch={hasBranch}
-          nodeTitle={step.title}
-          nodeSubtitle={subtitle}
-          nodeText={fullText}
-        />
+        {/* ── Branch form (toggled by icon) ── */}
+        {branchOpen && !hasBranch && (
+          <div style={{ marginBottom: "14px", marginTop: "20px" }}>
+            <BranchPrompt
+              stepId={step.id}
+              stepIndex={stepIdx}
+              hasBranch={hasBranch}
+              nodeTitle={step.title}
+              nodeSubtitle={subtitle}
+              nodeText={fullText}
+              onCreated={() => setBranchOpen(false)}
+            />
+          </div>
+        )}
 
         <StepBadge index={step.index} />
 
@@ -253,7 +120,7 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
             fontWeight: 700,
             color: "rgba(255,255,255,0.95)",
             margin: "0 0 10px 0",
-            paddingRight: "60px",
+            paddingRight: "100px",
             lineHeight: "1.4",
           }}
         >
@@ -281,53 +148,12 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
           }}
         />
 
-        {/* Narration text (shown after TTS call) */}
-        {narrationText && (
-          <div
-            style={{
-              marginBottom: "20px",
-              padding: "14px 16px",
-              background: "rgba(103,232,249,0.04)",
-              border: "1px solid rgba(103,232,249,0.1)",
-              borderRadius: "12px",
-            }}
-          >
-            <p
-              style={{
-                fontSize: "10px",
-                color: "rgba(103,232,249,0.5)",
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                margin: "0 0 8px 0",
-                fontWeight: 600,
-              }}
-            >
-              Narration
-            </p>
-            <p
-              style={{
-                fontSize: "13px",
-                color: "rgba(255,255,255,0.6)",
-                lineHeight: "1.7",
-                margin: 0,
-              }}
-            >
-              {narrationText}
-            </p>
-          </div>
-        )}
+        {narrationText && <NarrationPanel text={narrationText} />}
 
         <ActionChecklist text={fullText} />
 
         {step.duration && (
-          <p
-            style={{
-              fontSize: "11px",
-              color: "rgba(255,255,255,0.2)",
-              marginTop: "20px",
-              marginBottom: 0,
-            }}
-          >
+          <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.2)", marginTop: "20px", marginBottom: 0 }}>
             Estimated time: {step.duration}
           </p>
         )}
