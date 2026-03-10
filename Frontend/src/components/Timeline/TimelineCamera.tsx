@@ -14,9 +14,8 @@ const MIDDLE_DRAG_SPEED = 0.015;
 const LERP_POS = 0.08;
 const LERP_Z = 0.06;
 const DRAG_THRESHOLD = 3;
-const Z_PADDING = 8;
 
-export default function TimelineCamera({ activeIndex }: TimelineCameraProps) {
+export default function TimelineCamera({ activeIndex: _activeIndex }: TimelineCameraProps) {
   const { camera, gl } = useThree();
 
   const isLeftDragging = useRef(false);

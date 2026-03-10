@@ -6,7 +6,6 @@ import ActionChecklist from "./modal/ActionChecklist";
 import BranchPrompt from "./modal/BranchPrompt";
 import BranchIcon from "./modal/BranchIcon";
 import NarrationButton from "./modal/NarrationButton";
-import NarrationPanel from "./modal/NarrationPanel";
 
 interface NodeModalProps {
   step: TimelineStep | null;
@@ -15,7 +14,6 @@ interface NodeModalProps {
 
 export default function NodeModal({ step, onClose }: NodeModalProps) {
   const currentGoal = useAppStore((s) => s.currentGoal);
-  const [narrationText, setNarrationText] = useState<string | null>(null);
   const [branchOpen, setBranchOpen] = useState(false);
 
   if (!step) return null;
@@ -79,7 +77,6 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
             step={step}
             subtitle={subtitle}
             fullText={fullText}
-            onNarrationText={setNarrationText}
           />
           <button
             onClick={onClose}
@@ -147,8 +144,6 @@ export default function NodeModal({ step, onClose }: NodeModalProps) {
             marginBottom: "20px",
           }}
         />
-
-        {narrationText && <NarrationPanel text={narrationText} />}
 
         <ActionChecklist text={fullText} />
 
